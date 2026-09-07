@@ -1,0 +1,54 @@
+# Climate Eye View: Authoritative Model Configuration Profiles
+
+models:
+  flood:
+    version: "flood-v1.0"
+    rainfall_weight: 0.40
+    water_level_weight: 0.35
+    soil_moisture_weight: 0.25
+    rainfall_max_mmhr: 100.0
+    water_level_max_m: 15.0
+
+  heat:
+    version: "heat-v1.0"
+    formula: "tetens_steadman"
+    ambient_temp_weight: 0.60
+    relative_humidity_weight: 0.40
+    baseline_temp_c: 27.0
+    extreme_temp_c: 65.0
+
+  drought:
+    version: "drought-v1.0"
+    soil_dryness_weight: 0.50
+    persistent_heat_weight: 0.30
+    aridity_deficit_weight: 0.20
+    soil_moisture_normal_pct: 50.0
+    soil_moisture_critical_pct: 5.0
+
+  vulnerability:
+    version: "vulnerability-v1"
+    formula: "cobb_douglas"
+    hazard_elasticity: 0.40
+    exposure_elasticity: 0.30
+    demographic_elasticity: 0.30
+    accessibility_penalty: 0.35
+
+  evacuation:
+    version: "dijkstra-hazard-v1"
+    edge_accessibility_threshold: 0.40
+    max_route_hazard_limit: 0.95
+    shelter_safety_threshold: 0.60
+
+  response:
+    version: "response-v1"
+    priority_weights:
+      urgency: 0.40
+      vulnerability: 0.25
+      cascade: 0.20
+      confidence: 0.15
+
+  calibration:
+    min_samples: 50
+    default_method: "ISOTONIC"
+    drift_psi_threshold: 0.20
+    drift_ks_alpha: 0.05

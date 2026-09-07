@@ -1,0 +1,99 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: climate-eye-postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-climate_eye}
+      POSTGRES_USER: ${POSTGRES_USER:-climate_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-climate_secure_pass_2026}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-climate_user} -d ${POSTGRES_DB:-climate_eye}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - climate-net
+
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: climate-eye-mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+      - ./config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./config/acls:/mosquitto/config/acls:ro
+      - ./config/passwords:/mosquitto/config/passwords:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/#' -C 1 -i healthcheck -W 3 || exit 0"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - climate-net
+
+  intelligence:
+    build:
+      context: .
+      dockerfile: intelligence/Dockerfile
+    container_name: climate-eye-intelligence
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      PORT: 8000
+      HOST: 0.0.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SECRET_KEY: ${SECRET_KEY:-prod-climate-eye-intelligence-secret-key-32chars}
+      API_AUTH_ENABLED: ${API_AUTH_ENABLED:-true}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-admin-secret-key-xyz}
+      OPERATOR_API_KEY: ${OPERATOR_API_KEY:-operator-secret-key-abc}
+      RATE_LIMIT_ENABLED: "true"
+      MAX_REQUEST_BODY_BYTES: "10485760"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mqtt:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - climate-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: gods-eye-view/Dockerfile
+    container_name: climate-eye-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      intelligence:
+        condition: service_healthy
+    networks:
+      - climate-net
+
+volumes:
+  postgis_data:
+  mosquitto_data:
+  mosquitto_log:
+
+networks:
+  climate-net:
+    driver: bridge

@@ -1,0 +1,35 @@
+{
+  "telemetry": {
+    "schema_version": "1.0",
+    "node_id": "STATION-INSUF",
+    "timestamp": "2026-09-07T12:00:00Z",
+    "location": {
+      "lat": 17.385,
+      "lon": 78.4867,
+      "elevation": 500.0
+    },
+    "measurements": {
+      "temperature": 31.2,
+      "humidity": 44.8,
+      "pressure": 1013.0,
+      "rainfall": 0.0,
+      "soil_moisture": 40.0,
+      "water_level": 1.0,
+      "air_quality": 45.0
+    },
+    "quality": {
+      "valid": true,
+      "source": "ESP32",
+      "received_at": "2026-09-07T12:00:02Z",
+      "confidence": 0.98,
+      "anomaly_score": 0.0,
+      "flags": []
+    }
+  },
+  "history": [],
+  "horizons_minutes": [
+    30,
+    60,
+    360
+  ]
+}

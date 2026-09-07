@@ -1,0 +1,103 @@
+{
+  "scenario_id": "SCENARIO-1-NORMAL",
+  "description": "Normal ambient zone without active hazard -> stand-by status, 0 evacuees",
+  "zones": [
+    {
+      "zone_id": "ZONE-A",
+      "population": 8000,
+      "population_density": 2000.0,
+      "age_0_14_ratio": 0.15,
+      "age_65_plus_ratio": 0.1,
+      "disability_ratio": 0.03,
+      "healthcare_access": 0.85,
+      "road_accessibility": 0.9,
+      "critical_facility_access": 0.9,
+      "simulated": true
+    }
+  ],
+  "shelters": [
+    {
+      "shelter_id": "SHELTER-NORTH",
+      "name": "North Civic Center",
+      "latitude": 37.78,
+      "longitude": -122.4,
+      "capacity": 5000,
+      "current_occupancy": 500,
+      "accessibility": 0.95,
+      "safe": true,
+      "hazard_risk": 0.02,
+      "node_id": "SHELTER-NORTH",
+      "simulated": true
+    }
+  ],
+  "road_network": {
+    "network_id": "NET-METRO-01",
+    "nodes": [
+      "ZONE-A",
+      "INT-1",
+      "INT-2",
+      "INT-3",
+      "SHELTER-NORTH",
+      "SHELTER-EAST"
+    ],
+    "edges": [
+      {
+        "edge_id": "ROAD-A-1",
+        "from_node": "ZONE-A",
+        "to_node": "INT-1",
+        "distance_km": 3.0,
+        "travel_time_minutes": 6.0,
+        "accessibility": 0.9,
+        "hazard_risk": 0.05,
+        "closed": false,
+        "features": {
+          "lanes": 2
+        },
+        "simulated": true
+      },
+      {
+        "edge_id": "ROAD-1-NORTH",
+        "from_node": "INT-1",
+        "to_node": "SHELTER-NORTH",
+        "distance_km": 4.0,
+        "travel_time_minutes": 8.0,
+        "accessibility": 0.95,
+        "hazard_risk": 0.05,
+        "closed": false,
+        "features": {
+          "lanes": 4
+        },
+        "simulated": true
+      },
+      {
+        "edge_id": "ROAD-A-2",
+        "from_node": "ZONE-A",
+        "to_node": "INT-2",
+        "distance_km": 2.5,
+        "travel_time_minutes": 5.0,
+        "accessibility": 0.85,
+        "hazard_risk": 0.1,
+        "closed": false,
+        "features": {
+          "lanes": 2
+        },
+        "simulated": true
+      },
+      {
+        "edge_id": "ROAD-2-EAST",
+        "from_node": "INT-2",
+        "to_node": "SHELTER-EAST",
+        "distance_km": 5.0,
+        "travel_time_minutes": 10.0,
+        "accessibility": 0.9,
+        "hazard_risk": 0.1,
+        "closed": false,
+        "features": {
+          "lanes": 2
+        },
+        "simulated": true
+      }
+    ]
+  },
+  "hazards": []
+}

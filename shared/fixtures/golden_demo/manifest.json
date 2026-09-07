@@ -1,0 +1,64 @@
+{
+  "scenario_name": "Climate Eye View — Golden Canonical Demonstration Scenario",
+  "version": "1.0.0",
+  "node_id": "NODE-001",
+  "target_location": {
+    "name": "San Francisco Delta Sensor 001",
+    "latitude": 37.7749,
+    "longitude": -122.4194
+  },
+  "sequence_steps": [
+    {
+      "step": 1,
+      "name": "NORMAL_BASELINE",
+      "fixture": "01_normal_telemetry.json",
+      "expected_status": "NORMAL",
+      "expected_flood_severity": 0.0,
+      "expected_heat_severity": 0.0,
+      "epistemic_status": "OBSERVED"
+    },
+    {
+      "step": 2,
+      "name": "HEAVY_RAINFALL",
+      "fixture": "02_heavy_rain_telemetry.json",
+      "expected_status": "MONITORING",
+      "rainfall_mm": 42.0,
+      "epistemic_status": "OBSERVED"
+    },
+    {
+      "step": 3,
+      "name": "SOIL_SATURATION",
+      "fixture": "03_saturated_soil_telemetry.json",
+      "soil_moisture_pct": 88.0,
+      "water_level_m": 3.4,
+      "epistemic_status": "OBSERVED"
+    },
+    {
+      "step": 4,
+      "name": "FLOOD_SURGE_PREDICTION",
+      "fixture": "04_flood_surge_telemetry.json",
+      "expected_hazard": "FLOOD",
+      "expected_hazard_severity_min": 0.70,
+      "prediction_horizons_minutes": [30, 60, 360],
+      "compound_cascade": "HEAVY_RAIN -> SOIL_SATURATION -> SURGE -> BRIDGE_FAILURE",
+      "epistemic_status": "PREDICTED"
+    },
+    {
+      "step": 5,
+      "name": "DYNAMIC_EVACUATION_REROUTE",
+      "fixture": "05_bridge_failure_network.json",
+      "unsafe_segment": "BRIDGE-B",
+      "reroute_destination": "SHELTER-EAST",
+      "epistemic_status": "INFERRED"
+    },
+    {
+      "step": 6,
+      "name": "DIGITAL_TWIN_SIMULATION",
+      "fixture": "06_simulation_rain40.json",
+      "modifier": "RAIN +40%",
+      "simulated": true,
+      "epistemic_status": "SIMULATED",
+      "state_isolation": "Live authoritative state unaffected"
+    }
+  ]
+}

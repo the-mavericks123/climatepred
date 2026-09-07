@@ -1,0 +1,17 @@
+{
+  "dataset_id": "EVAL-FLOOD-SYNTHETIC-001",
+  "version": "1.0",
+  "dataset_type": "SYNTHETIC",
+  "domain": "flood",
+  "description": "Synthetic 100-sample flood evaluation dataset spanning low to critical flood conditions.",
+  "sample_count": 100,
+  "features_summary": {
+    "rainfall_range_mmhr": [0.0, 99.0],
+    "water_level_range_m": [0.0, 14.85],
+    "soil_moisture_range_pct": [30.0, 89.4]
+  },
+  "ground_truth_summary": {
+    "positive_samples": 49,
+    "negative_samples": 51
+  }
+}

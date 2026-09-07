@@ -1,0 +1,102 @@
+{
+  "scenario_id": "GOLDEN-DEMO-BRIDGE-B-FAILURE",
+  "description": "Golden Scenario: Bridge B becomes unsafe due to predicted flood surge, forcing dynamic recalculation to alternate Shelter East",
+  "zones": [
+    {
+      "zone_id": "ZONE-A",
+      "population": 5000,
+      "healthcare_access": 0.6,
+      "road_accessibility": 0.4,
+      "simulated": false
+    }
+  ],
+  "shelters": [
+    {
+      "shelter_id": "SHELTER-NORTH",
+      "name": "North Valley Shelter",
+      "latitude": 37.78,
+      "longitude": -122.41,
+      "capacity": 6000,
+      "current_occupancy": 800,
+      "accessibility": 0.95,
+      "safe": true,
+      "hazard_risk": 0.1,
+      "node_id": "SHELTER-NORTH",
+      "simulated": false
+    },
+    {
+      "shelter_id": "SHELTER-EAST",
+      "name": "East Ridge Relief Center",
+      "latitude": 37.76,
+      "longitude": -122.36,
+      "capacity": 5000,
+      "current_occupancy": 500,
+      "accessibility": 0.9,
+      "safe": true,
+      "hazard_risk": 0.05,
+      "node_id": "SHELTER-EAST",
+      "simulated": false
+    }
+  ],
+  "road_network": {
+    "network_id": "NET-GOLDEN-01",
+    "nodes": [
+      "ZONE-A",
+      "INT-1",
+      "INT-2",
+      "SHELTER-NORTH",
+      "SHELTER-EAST"
+    ],
+    "edges": [
+      {
+        "edge_id": "ROAD-ZONEA-INT1",
+        "from_node": "ZONE-A",
+        "to_node": "INT-1",
+        "distance_km": 2.0,
+        "travel_time_minutes": 4.0,
+        "accessibility": 0.9,
+        "hazard_risk": 0.1,
+        "closed": false,
+        "features": { "lanes": 2 },
+        "simulated": false
+      },
+      {
+        "edge_id": "BRIDGE-B",
+        "from_node": "INT-1",
+        "to_node": "SHELTER-NORTH",
+        "distance_km": 3.0,
+        "travel_time_minutes": 6.0,
+        "accessibility": 0.15,
+        "hazard_risk": 0.92,
+        "closed": true,
+        "closure_reason": "Inundation depth exceeds 1.2m; structural bridge cutoff",
+        "features": { "lanes": 2, "bridge": true },
+        "simulated": false
+      },
+      {
+        "edge_id": "ROAD-ZONEA-INT2",
+        "from_node": "ZONE-A",
+        "to_node": "INT-2",
+        "distance_km": 3.5,
+        "travel_time_minutes": 7.0,
+        "accessibility": 0.85,
+        "hazard_risk": 0.15,
+        "closed": false,
+        "features": { "lanes": 2 },
+        "simulated": false
+      },
+      {
+        "edge_id": "ROAD-INT2-EAST",
+        "from_node": "INT-2",
+        "to_node": "SHELTER-EAST",
+        "distance_km": 4.0,
+        "travel_time_minutes": 8.0,
+        "accessibility": 0.95,
+        "hazard_risk": 0.1,
+        "closed": false,
+        "features": { "lanes": 2 },
+        "simulated": false
+      }
+    ]
+  }
+}

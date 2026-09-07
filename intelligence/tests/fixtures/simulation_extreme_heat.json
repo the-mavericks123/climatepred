@@ -1,0 +1,1010 @@
+{
+  "simulation_id": "SIM-SCN-EXTREME-HEAT-4CC1C898",
+  "scenario_id": "SCN-EXTREME-HEAT",
+  "scenario_version": "1.0",
+  "timestamp": "2026-09-07T12:00:00Z",
+  "simulated": true,
+  "base_state_id": "STATE-BASELINE-DEFAULT",
+  "base_state_hash": "8d14dc5677c6de419f6bfa20671ec10987f702edfc00fef24ef84861f7bb7c13",
+  "parameters": {
+    "rainfall_multiplier": null,
+    "temperature_delta": 5.0,
+    "soil_moisture_delta": null,
+    "water_level_delta": null,
+    "drainage_failure_severity": null,
+    "road_accessibility_reduction": null,
+    "target_edge_ids": null
+  },
+  "summary": {
+    "hazard_change": {
+      "primary_hazard": "heat",
+      "max_severity_delta": 0.5489,
+      "status": "ESCALATED"
+    },
+    "population_change": {
+      "newly_exposed_population": 11820,
+      "total_simulated_exposed": 11820,
+      "evacuation_demand_shift": 9913
+    },
+    "route_change": {
+      "routes_severed": 0,
+      "routes_modified": 1,
+      "status_transitions_count": 1
+    },
+    "infrastructure_change": {
+      "newly_avoided_edges_count": 0,
+      "shelters_with_demand_shift": 1
+    }
+  },
+  "comparison": {
+    "metrics": [
+      {
+        "name": "drought_severity",
+        "baseline": 0.0,
+        "simulated": 0.1756,
+        "delta": 0.1756,
+        "relative_delta": null,
+        "units": "severity_index"
+      },
+      {
+        "name": "flood_severity",
+        "baseline": 0.0,
+        "simulated": 0.3936,
+        "delta": 0.3936,
+        "relative_delta": null,
+        "units": "severity_index"
+      },
+      {
+        "name": "heat_severity",
+        "baseline": 0.0,
+        "simulated": 0.5489,
+        "delta": 0.5489,
+        "relative_delta": null,
+        "units": "severity_index"
+      },
+      {
+        "name": "population_exposed",
+        "baseline": 0.0,
+        "simulated": 11820.0,
+        "delta": 11820.0,
+        "relative_delta": null,
+        "units": "residents"
+      },
+      {
+        "name": "mean_human_impact",
+        "baseline": 0.0,
+        "simulated": 0.722,
+        "delta": 0.722,
+        "relative_delta": null,
+        "units": "impact_score"
+      },
+      {
+        "name": "population_to_evacuate",
+        "baseline": 0.0,
+        "simulated": 9913.0,
+        "delta": 9913.0,
+        "relative_delta": null,
+        "units": "residents"
+      }
+    ],
+    "route_status_transitions": {
+      "ZONE-METRO-01": {
+        "baseline": "NONE",
+        "simulated": "PARTIAL_CAPACITY"
+      }
+    },
+    "new_avoid_edges": [],
+    "shelter_occupancy_deltas": {
+      "SHELTER-NORTH-01": 7000
+    }
+  },
+  "hazards": [
+    {
+      "hazard_id": "HAZ-HEAT-TEL-SIM-BASE-01-1788782400",
+      "hazard": "heat",
+      "severity": 0.5489,
+      "confidence": 0.95,
+      "classification": "MODERATE",
+      "status": "DETECTED",
+      "timestamp": "2026-09-07T12:00:00Z",
+      "forecast_horizon_minutes": 0,
+      "location": {
+        "lat": 37.7749,
+        "lon": -122.4194,
+        "elevation": null
+      },
+      "features": {
+        "temperature_c": 33.0,
+        "humidity_pct": 65.0,
+        "rainfall_mmhr": 15.0,
+        "soil_moisture_pct": 45.0,
+        "water_level_m": 12.0,
+        "apparent_temperature_c": 39.05
+      },
+      "drivers": [
+        "High thermal stress: apparent temperature (39.1 \u00b0C) in Extreme Caution zone",
+        "High ambient dry-bulb temperature (33.0 \u00b0C)"
+      ],
+      "source": "model",
+      "model_version": "heat-v1",
+      "simulated": false,
+      "provenance_hash": "df9eccd2d310a96d8cad7e92ed1398761d74db616b46dfade1a74ab5fe415320",
+      "reason": null
+    },
+    {
+      "hazard_id": "HAZ-FLOOD-TEL-SIM-BASE-01-1788782400",
+      "hazard": "flood",
+      "severity": 0.3936,
+      "confidence": 0.95,
+      "classification": "MODERATE",
+      "status": "DETECTED",
+      "timestamp": "2026-09-07T12:00:00Z",
+      "forecast_horizon_minutes": 0,
+      "location": {
+        "lat": 37.7749,
+        "lon": -122.4194,
+        "elevation": null
+      },
+      "features": {
+        "temperature_c": 33.0,
+        "humidity_pct": 65.0,
+        "rainfall_mmhr": 15.0,
+        "soil_moisture_pct": 45.0,
+        "water_level_m": 12.0,
+        "rainfall_score": 0.15,
+        "water_level_score": 0.8,
+        "soil_moisture_score": 0.2143
+      },
+      "drivers": [
+        "critical water level (12.00 m)"
+      ],
+      "source": "model",
+      "model_version": "flood-v1",
+      "simulated": false,
+      "provenance_hash": "df9eccd2d310a96d8cad7e92ed1398761d74db616b46dfade1a74ab5fe415320",
+      "reason": null
+    },
+    {
+      "hazard_id": "HAZ-DROUGHT-TEL-SIM-BASE-01-1788782400",
+      "hazard": "drought",
+      "severity": 0.1756,
+      "confidence": 0.95,
+      "classification": "NORMAL",
+      "status": "NOT_DETECTED",
+      "timestamp": "2026-09-07T12:00:00Z",
+      "forecast_horizon_minutes": 0,
+      "location": {
+        "lat": 37.7749,
+        "lon": -122.4194,
+        "elevation": null
+      },
+      "features": {
+        "temperature_c": 33.0,
+        "humidity_pct": 65.0,
+        "rainfall_mmhr": 15.0,
+        "soil_moisture_pct": 45.0,
+        "water_level_m": 12.0,
+        "soil_dryness_score": 0.1111,
+        "heat_factor_score": 0.4,
+        "humidity_deficit_score": 0.0
+      },
+      "drivers": [
+        "above-baseline temperature (33.0\u00b0C)"
+      ],
+      "source": "model",
+      "model_version": "drought-v1",
+      "simulated": false,
+      "provenance_hash": "df9eccd2d310a96d8cad7e92ed1398761d74db616b46dfade1a74ab5fe415320",
+      "reason": null
+    }
+  ],
+  "predictions": [
+    {
+      "prediction_id": "PRED-HEAT-TEL-SIM-BASE-01-30M-1788782400",
+      "hazard": "heat",
+      "prediction_time": "2026-09-07T12:00:00Z",
+      "forecast_time": "2026-09-07T12:30:00Z",
+      "forecast_horizon_minutes": 30,
+      "severity": 0.5489,
+      "confidence": 0.4512,
+      "classification": "MODERATE",
+      "status": "DETECTED",
+      "geometry": null,
+      "model_version": "heat-pred-v1",
+      "source_hazard_id": "HAZ-HEAT-TEL-SIM-BASE-01-1788782400",
+      "provenance_hash": "adcce07fce6e6e65e250231552dcd7d34fa537497f10faf3938d781b1811b96d",
+      "drivers": [
+        "temperature persistence fallback (33.0): insufficient history to project trend",
+        "humidity persistence fallback (65.0): insufficient history to project trend",
+        "Predicted impact: High thermal stress: apparent temperature (39.1 \u00b0C) in Extreme Caution zone",
+        "Predicted impact: High ambient dry-bulb temperature (33.0 \u00b0C)"
+      ],
+      "data_quality": {
+        "base_quality": 0.95,
+        "staleness_factor": 1.0,
+        "horizon_minutes": 30,
+        "horizon_factor": 0.95,
+        "sample_count_avg": 1.0,
+        "has_insufficient_history": true,
+        "history_sufficiency": 0.5,
+        "trend_variance_avg": 0.0,
+        "trend_stability": 1.0,
+        "final_confidence": 0.4512
+      },
+      "predicted_features": {
+        "temperature": 33.0,
+        "humidity": 65.0
+      },
+      "simulated": false,
+      "reason": null
+    },
+    {
+      "prediction_id": "PRED-FLOOD-TEL-SIM-BASE-01-30M-1788782400",
+      "hazard": "flood",
+      "prediction_time": "2026-09-07T12:00:00Z",
+      "forecast_time": "2026-09-07T12:30:00Z",
+      "forecast_horizon_minutes": 30,
+      "severity": 0.3936,
+      "confidence": 0.4512,
+      "classification": "MODERATE",
+      "status": "DETECTED",
+      "geometry": null,
+      "model_version": "flood-pred-v1",
+      "source_hazard_id": "HAZ-FLOOD-TEL-SIM-BASE-01-1788782400",
+      "provenance_hash": "96bd6662756b37885d947a140d52ec93775d31279833408e4d1f54013ff21b39",
+      "drivers": [
+        "rainfall persistence fallback (15.0): insufficient history to project trend",
+        "water_level persistence fallback (12.0): insufficient history to project trend",
+        "soil_moisture persistence fallback (45.0): insufficient history to project trend",
+        "Predicted impact: critical water level (12.00 m)"
+      ],
+      "data_quality": {
+        "base_quality": 0.95,
+        "staleness_factor": 1.0,
+        "horizon_minutes": 30,
+        "horizon_factor": 0.95,
+        "sample_count_avg": 1.0,
+        "has_insufficient_history": true,
+        "history_sufficiency": 0.5,
+        "trend_variance_avg": 0.0,
+        "trend_stability": 1.0,
+        "final_confidence": 0.4512
+      },
+      "predicted_features": {
+        "rainfall": 15.0,
+        "water_level": 12.0,
+        "soil_moisture": 45.0
+      },
+      "simulated": false,
+      "reason": null
+    },
+    {
+      "prediction_id": "PRED-DROUGHT-TEL-SIM-BASE-01-30M-1788782400",
+      "hazard": "drought",
+      "prediction_time": "2026-09-07T12:00:00Z",
+      "forecast_time": "2026-09-07T12:30:00Z",
+      "forecast_horizon_minutes": 30,
+      "severity": 0.1756,
+      "confidence": 0.4512,
+      "classification": "NORMAL",
+      "status": "NOT_DETECTED",
+      "geometry": null,
+      "model_version": "drought-pred-v1",
+      "source_hazard_id": "HAZ-DROUGHT-TEL-SIM-BASE-01-1788782400",
+      "provenance_hash": "29f51241185177021b310bd357a701048903142dc52dde8fc65eb414aacb8c6b",
+      "drivers": [
+        "soil_moisture persistence fallback (45.0): insufficient history to project trend",
+        "temperature persistence fallback (33.0): insufficient history to project trend",
+        "humidity persistence fallback (65.0): insufficient history to project trend",
+        "Predicted impact: above-baseline temperature (33.0\u00b0C)"
+      ],
+      "data_quality": {
+        "base_quality": 0.95,
+        "staleness_factor": 1.0,
+        "horizon_minutes": 30,
+        "horizon_factor": 0.95,
+        "sample_count_avg": 1.0,
+        "has_insufficient_history": true,
+        "history_sufficiency": 0.5,
+        "trend_variance_avg": 0.0,
+        "trend_stability": 1.0,
+        "final_confidence": 0.4512
+      },
+      "predicted_features": {
+        "soil_moisture": 45.0,
+        "temperature": 33.0,
+        "humidity": 65.0
+      },
+      "simulated": false,
+      "reason": null
+    },
+    {
+      "prediction_id": "PRED-HEAT-TEL-SIM-BASE-01-60M-1788782400",
+      "hazard": "heat",
+      "prediction_time": "2026-09-07T12:00:00Z",
+      "forecast_time": "2026-09-07T13:00:00Z",
+      "forecast_horizon_minutes": 60,
+      "severity": 0.5489,
+      "confidence": 0.4275,
+      "classification": "MODERATE",
+      "status": "DETECTED",
+      "geometry": null,
+      "model_version": "heat-pred-v1",
+      "source_hazard_id": "HAZ-HEAT-TEL-SIM-BASE-01-1788782400",
+      "provenance_hash": "cf3b2ddac298d8f27fef65549b593cfd8ffa2bfe25dff0459494016933281a14",
+      "drivers": [
+        "temperature persistence fallback (33.0): insufficient history to project trend",
+        "humidity persistence fallback (65.0): insufficient history to project trend",
+        "Predicted impact: High thermal stress: apparent temperature (39.1 \u00b0C) in Extreme Caution zone",
+        "Predicted impact: High ambient dry-bulb temperature (33.0 \u00b0C)"
+      ],
+      "data_quality": {
+        "base_quality": 0.95,
+        "staleness_factor": 1.0,
+        "horizon_minutes": 60,
+        "horizon_factor": 0.9,
+        "sample_count_avg": 1.0,
+        "has_insufficient_history": true,
+        "history_sufficiency": 0.5,
+        "trend_variance_avg": 0.0,
+        "trend_stability": 1.0,
+        "final_confidence": 0.4275
+      },
+      "predicted_features": {
+        "temperature": 33.0,
+        "humidity": 65.0
+      },
+      "simulated": false,
+      "reason": null
+    },
+    {
+      "prediction_id": "PRED-FLOOD-TEL-SIM-BASE-01-60M-1788782400",
+      "hazard": "flood",
+      "prediction_time": "2026-09-07T12:00:00Z",
+      "forecast_time": "2026-09-07T13:00:00Z",
+      "forecast_horizon_minutes": 60,
+      "severity": 0.3936,
+      "confidence": 0.4275,
+      "classification": "MODERATE",
+      "status": "DETECTED",
+      "geometry": null,
+      "model_version": "flood-pred-v1",
+      "source_hazard_id": "HAZ-FLOOD-TEL-SIM-BASE-01-1788782400",
+      "provenance_hash": "3194ee474bdf7c5bc99bb30c9be9c0f4509105105e8da7c5489a999222b46a97",
+      "drivers": [
+        "rainfall persistence fallback (15.0): insufficient history to project trend",
+        "water_level persistence fallback (12.0): insufficient history to project trend",
+        "soil_moisture persistence fallback (45.0): insufficient history to project trend",
+        "Predicted impact: critical water level (12.00 m)"
+      ],
+      "data_quality": {
+        "base_quality": 0.95,
+        "staleness_factor": 1.0,
+        "horizon_minutes": 60,
+        "horizon_factor": 0.9,
+        "sample_count_avg": 1.0,
+        "has_insufficient_history": true,
+        "history_sufficiency": 0.5,
+        "trend_variance_avg": 0.0,
+        "trend_stability": 1.0,
+        "final_confidence": 0.4275
+      },
+      "predicted_features": {
+        "rainfall": 15.0,
+        "water_level": 12.0,
+        "soil_moisture": 45.0
+      },
+      "simulated": false,
+      "reason": null
+    },
+    {
+      "prediction_id": "PRED-DROUGHT-TEL-SIM-BASE-01-60M-1788782400",
+      "hazard": "drought",
+      "prediction_time": "2026-09-07T12:00:00Z",
+      "forecast_time": "2026-09-07T13:00:00Z",
+      "forecast_horizon_minutes": 60,
+      "severity": 0.1756,
+      "confidence": 0.4275,
+      "classification": "NORMAL",
+      "status": "NOT_DETECTED",
+      "geometry": null,
+      "model_version": "drought-pred-v1",
+      "source_hazard_id": "HAZ-DROUGHT-TEL-SIM-BASE-01-1788782400",
+      "provenance_hash": "08f07796e1da361d61711df5261794e388ff257252fbc90646557981038fb786",
+      "drivers": [
+        "soil_moisture persistence fallback (45.0): insufficient history to project trend",
+        "temperature persistence fallback (33.0): insufficient history to project trend",
+        "humidity persistence fallback (65.0): insufficient history to project trend",
+        "Predicted impact: above-baseline temperature (33.0\u00b0C)"
+      ],
+      "data_quality": {
+        "base_quality": 0.95,
+        "staleness_factor": 1.0,
+        "horizon_minutes": 60,
+        "horizon_factor": 0.9,
+        "sample_count_avg": 1.0,
+        "has_insufficient_history": true,
+        "history_sufficiency": 0.5,
+        "trend_variance_avg": 0.0,
+        "trend_stability": 1.0,
+        "final_confidence": 0.4275
+      },
+      "predicted_features": {
+        "soil_moisture": 45.0,
+        "temperature": 33.0,
+        "humidity": 65.0
+      },
+      "simulated": false,
+      "reason": null
+    },
+    {
+      "prediction_id": "PRED-HEAT-TEL-SIM-BASE-01-360M-1788782400",
+      "hazard": "heat",
+      "prediction_time": "2026-09-07T12:00:00Z",
+      "forecast_time": "2026-09-07T18:00:00Z",
+      "forecast_horizon_minutes": 360,
+      "severity": 0.5489,
+      "confidence": 0.3562,
+      "classification": "MODERATE",
+      "status": "DETECTED",
+      "geometry": null,
+      "model_version": "heat-pred-v1",
+      "source_hazard_id": "HAZ-HEAT-TEL-SIM-BASE-01-1788782400",
+      "provenance_hash": "6bfd378ad9321faf6163a9912487ded31b0020fb36c337dea15d18b926ecf23a",
+      "drivers": [
+        "temperature persistence fallback (33.0): insufficient history to project trend",
+        "humidity persistence fallback (65.0): insufficient history to project trend",
+        "Predicted impact: High thermal stress: apparent temperature (39.1 \u00b0C) in Extreme Caution zone",
+        "Predicted impact: High ambient dry-bulb temperature (33.0 \u00b0C)"
+      ],
+      "data_quality": {
+        "base_quality": 0.95,
+        "staleness_factor": 1.0,
+        "horizon_minutes": 360,
+        "horizon_factor": 0.75,
+        "sample_count_avg": 1.0,
+        "has_insufficient_history": true,
+        "history_sufficiency": 0.5,
+        "trend_variance_avg": 0.0,
+        "trend_stability": 1.0,
+        "final_confidence": 0.3562
+      },
+      "predicted_features": {
+        "temperature": 33.0,
+        "humidity": 65.0
+      },
+      "simulated": false,
+      "reason": null
+    },
+    {
+      "prediction_id": "PRED-FLOOD-TEL-SIM-BASE-01-360M-1788782400",
+      "hazard": "flood",
+      "prediction_time": "2026-09-07T12:00:00Z",
+      "forecast_time": "2026-09-07T18:00:00Z",
+      "forecast_horizon_minutes": 360,
+      "severity": 0.3936,
+      "confidence": 0.3562,
+      "classification": "MODERATE",
+      "status": "DETECTED",
+      "geometry": null,
+      "model_version": "flood-pred-v1",
+      "source_hazard_id": "HAZ-FLOOD-TEL-SIM-BASE-01-1788782400",
+      "provenance_hash": "536218071df6aef4f4abaa0713671e6a1e05025cf1f6800229743217d442e7e5",
+      "drivers": [
+        "rainfall persistence fallback (15.0): insufficient history to project trend",
+        "water_level persistence fallback (12.0): insufficient history to project trend",
+        "soil_moisture persistence fallback (45.0): insufficient history to project trend",
+        "Predicted impact: critical water level (12.00 m)"
+      ],
+      "data_quality": {
+        "base_quality": 0.95,
+        "staleness_factor": 1.0,
+        "horizon_minutes": 360,
+        "horizon_factor": 0.75,
+        "sample_count_avg": 1.0,
+        "has_insufficient_history": true,
+        "history_sufficiency": 0.5,
+        "trend_variance_avg": 0.0,
+        "trend_stability": 1.0,
+        "final_confidence": 0.3562
+      },
+      "predicted_features": {
+        "rainfall": 15.0,
+        "water_level": 12.0,
+        "soil_moisture": 45.0
+      },
+      "simulated": false,
+      "reason": null
+    },
+    {
+      "prediction_id": "PRED-DROUGHT-TEL-SIM-BASE-01-360M-1788782400",
+      "hazard": "drought",
+      "prediction_time": "2026-09-07T12:00:00Z",
+      "forecast_time": "2026-09-07T18:00:00Z",
+      "forecast_horizon_minutes": 360,
+      "severity": 0.1756,
+      "confidence": 0.3562,
+      "classification": "NORMAL",
+      "status": "NOT_DETECTED",
+      "geometry": null,
+      "model_version": "drought-pred-v1",
+      "source_hazard_id": "HAZ-DROUGHT-TEL-SIM-BASE-01-1788782400",
+      "provenance_hash": "9bb334c364b8c808df6aab34c0a4c5c7331f0218353314ab9d3abd9684831d89",
+      "drivers": [
+        "soil_moisture persistence fallback (45.0): insufficient history to project trend",
+        "temperature persistence fallback (33.0): insufficient history to project trend",
+        "humidity persistence fallback (65.0): insufficient history to project trend",
+        "Predicted impact: above-baseline temperature (33.0\u00b0C)"
+      ],
+      "data_quality": {
+        "base_quality": 0.95,
+        "staleness_factor": 1.0,
+        "horizon_minutes": 360,
+        "horizon_factor": 0.75,
+        "sample_count_avg": 1.0,
+        "has_insufficient_history": true,
+        "history_sufficiency": 0.5,
+        "trend_variance_avg": 0.0,
+        "trend_stability": 1.0,
+        "final_confidence": 0.3562
+      },
+      "predicted_features": {
+        "soil_moisture": 45.0,
+        "temperature": 33.0,
+        "humidity": 65.0
+      },
+      "simulated": false,
+      "reason": null
+    }
+  ],
+  "compound_events": [
+    {
+      "event_id": "COMP-CASCADE-05DEBBBA",
+      "event_type": "CASCADE",
+      "severity": 0.7069,
+      "confidence": 0.6805,
+      "timestamp": "2026-09-07T12:00:00Z",
+      "chain": [
+        "flood",
+        "inferred_road_failure_risk",
+        "inferred_access_loss"
+      ],
+      "contributing_states": [
+        {
+          "state_id": "flood",
+          "evidence_type": "OBSERVED",
+          "severity": 0.3936,
+          "confidence": 0.95,
+          "timestamp": "2026-09-07T12:00:00Z",
+          "forecast_horizon_minutes": 0,
+          "source_ref_id": "HAZ-FLOOD-TEL-SIM-BASE-01-1788782400",
+          "provenance_hash": "df9eccd2d310a96d8cad7e92ed1398761d74db616b46dfade1a74ab5fe415320",
+          "metadata": {
+            "features": {
+              "temperature_c": 33.0,
+              "humidity_pct": 65.0,
+              "rainfall_mmhr": 15.0,
+              "soil_moisture_pct": 45.0,
+              "water_level_m": 12.0,
+              "rainfall_score": 0.15,
+              "water_level_score": 0.8,
+              "soil_moisture_score": 0.2143
+            },
+            "drivers": [
+              "critical water level (12.00 m)"
+            ],
+            "model_version": "flood-v1"
+          }
+        },
+        {
+          "state_id": "inferred_road_failure_risk",
+          "evidence_type": "INFERRED",
+          "severity": 0.5136,
+          "confidence": 0.855,
+          "timestamp": "2026-09-07T12:00:00Z",
+          "forecast_horizon_minutes": 0,
+          "source_ref_id": "INFER-FLOOD-ROAD-001",
+          "provenance_hash": null,
+          "metadata": {
+            "inferred_by_rule": "FLOOD-ROAD-001"
+          }
+        },
+        {
+          "state_id": "inferred_access_loss",
+          "evidence_type": "INFERRED",
+          "severity": 0.6136,
+          "confidence": 0.7695,
+          "timestamp": "2026-09-07T12:00:00Z",
+          "forecast_horizon_minutes": 0,
+          "source_ref_id": "INFER-ROAD-ACCESS-001",
+          "provenance_hash": null,
+          "metadata": {
+            "inferred_by_rule": "ROAD-ACCESS-001"
+          }
+        }
+      ],
+      "relationships": [
+        {
+          "from_state": "flood",
+          "to_state": "inferred_road_failure_risk",
+          "relationship_type": "CASCADE",
+          "rule_id": "FLOOD-ROAD-001",
+          "explanation": "Elevated surface water levels inundate roadway network, resulting in high physical failure/washout risk.",
+          "weight": 1.12
+        },
+        {
+          "from_state": "inferred_road_failure_risk",
+          "to_state": "inferred_access_loss",
+          "relationship_type": "CASCADE",
+          "rule_id": "ROAD-ACCESS-001",
+          "explanation": "Inundated/failed transportation corridors block transit routes to critical infrastructure and emergency facilities.",
+          "weight": 1.1
+        }
+      ],
+      "evidence_ids": [
+        "HAZ-FLOOD-TEL-SIM-BASE-01-1788782400",
+        "INFER-FLOOD-ROAD-001",
+        "INFER-ROAD-ACCESS-001"
+      ],
+      "rule_version": "compound-v1",
+      "provenance_hash": "05debbba69dead9c7f9f9054b10c69775c695de493448c1d5cb2a4a441eed36c",
+      "drivers": [
+        "Cascading chain detected (3 stages): flood -> inferred_road_failure_risk -> inferred_access_loss",
+        "Base contributor severity: 0.507 with +0.20 cascade amplification",
+        "Link [flood -> inferred_road_failure_risk]: Elevated surface water levels inundate roadway network, resulting in high physical failure/washout risk. (Rule: FLOOD-ROAD-001)",
+        "Link [inferred_road_failure_risk -> inferred_access_loss]: Inundated/failed transportation corridors block transit routes to critical infrastructure and emergency facilities. (Rule: ROAD-ACCESS-001)"
+      ],
+      "simulated": false
+    },
+    {
+      "event_id": "COMP-CASCADE-69FBB5A9",
+      "event_type": "CASCADE",
+      "severity": 0.6801,
+      "confidence": 0.7799,
+      "timestamp": "2026-09-07T12:00:00Z",
+      "chain": [
+        "heat",
+        "heat_flood_multihazard_stress"
+      ],
+      "contributing_states": [
+        {
+          "state_id": "heat",
+          "evidence_type": "OBSERVED",
+          "severity": 0.5489,
+          "confidence": 0.95,
+          "timestamp": "2026-09-07T12:00:00Z",
+          "forecast_horizon_minutes": 0,
+          "source_ref_id": "HAZ-HEAT-TEL-SIM-BASE-01-1788782400",
+          "provenance_hash": "df9eccd2d310a96d8cad7e92ed1398761d74db616b46dfade1a74ab5fe415320",
+          "metadata": {
+            "features": {
+              "temperature_c": 33.0,
+              "humidity_pct": 65.0,
+              "rainfall_mmhr": 15.0,
+              "soil_moisture_pct": 45.0,
+              "water_level_m": 12.0,
+              "apparent_temperature_c": 39.05
+            },
+            "drivers": [
+              "High thermal stress: apparent temperature (39.1 \u00b0C) in Extreme Caution zone",
+              "High ambient dry-bulb temperature (33.0 \u00b0C)"
+            ],
+            "model_version": "heat-v1"
+          }
+        },
+        {
+          "state_id": "heat_flood_multihazard_stress",
+          "evidence_type": "INFERRED",
+          "severity": 0.6113,
+          "confidence": 0.855,
+          "timestamp": "2026-09-07T12:00:00Z",
+          "forecast_horizon_minutes": 0,
+          "source_ref_id": "INFER-HEAT-FLOOD-001",
+          "provenance_hash": null,
+          "metadata": {
+            "inferred_by_rule": "HEAT-FLOOD-001"
+          }
+        }
+      ],
+      "relationships": [
+        {
+          "from_state": "heat",
+          "to_state": "heat_flood_multihazard_stress",
+          "relationship_type": "COMPOUND",
+          "rule_id": "HEAT-FLOOD-001",
+          "explanation": "Simultaneous occurrence of localized thermal extremes and hydrological flooding challenges simultaneous response logistics.",
+          "weight": 1.1400000000000001
+        }
+      ],
+      "evidence_ids": [
+        "HAZ-HEAT-TEL-SIM-BASE-01-1788782400",
+        "INFER-HEAT-FLOOD-001"
+      ],
+      "rule_version": "compound-v1",
+      "provenance_hash": "69fbb5a919b45d706a71ecf4a06c33cefa64f2510879dbc78ed1baf7ec3d4b77",
+      "drivers": [
+        "Cascading chain detected (2 stages): heat -> heat_flood_multihazard_stress",
+        "Base contributor severity: 0.580 with +0.10 cascade amplification",
+        "Link [heat -> heat_flood_multihazard_stress]: Simultaneous occurrence of localized thermal extremes and hydrological flooding challenges simultaneous response logistics. (Rule: HEAT-FLOOD-001)"
+      ],
+      "simulated": false
+    },
+    {
+      "event_id": "COMP-MULTI-E515C72D",
+      "event_type": "COMPOUND",
+      "severity": 0.6213,
+      "confidence": 0.9215,
+      "timestamp": "2026-09-07T12:00:00Z",
+      "chain": [
+        "flood",
+        "heat"
+      ],
+      "contributing_states": [
+        {
+          "state_id": "heat",
+          "evidence_type": "OBSERVED",
+          "severity": 0.5489,
+          "confidence": 0.95,
+          "timestamp": "2026-09-07T12:00:00Z",
+          "forecast_horizon_minutes": 0,
+          "source_ref_id": "HAZ-HEAT-TEL-SIM-BASE-01-1788782400",
+          "provenance_hash": "df9eccd2d310a96d8cad7e92ed1398761d74db616b46dfade1a74ab5fe415320",
+          "metadata": {
+            "features": {
+              "temperature_c": 33.0,
+              "humidity_pct": 65.0,
+              "rainfall_mmhr": 15.0,
+              "soil_moisture_pct": 45.0,
+              "water_level_m": 12.0,
+              "apparent_temperature_c": 39.05
+            },
+            "drivers": [
+              "High thermal stress: apparent temperature (39.1 \u00b0C) in Extreme Caution zone",
+              "High ambient dry-bulb temperature (33.0 \u00b0C)"
+            ],
+            "model_version": "heat-v1"
+          }
+        },
+        {
+          "state_id": "flood",
+          "evidence_type": "OBSERVED",
+          "severity": 0.3936,
+          "confidence": 0.95,
+          "timestamp": "2026-09-07T12:00:00Z",
+          "forecast_horizon_minutes": 0,
+          "source_ref_id": "HAZ-FLOOD-TEL-SIM-BASE-01-1788782400",
+          "provenance_hash": "df9eccd2d310a96d8cad7e92ed1398761d74db616b46dfade1a74ab5fe415320",
+          "metadata": {
+            "features": {
+              "temperature_c": 33.0,
+              "humidity_pct": 65.0,
+              "rainfall_mmhr": 15.0,
+              "soil_moisture_pct": 45.0,
+              "water_level_m": 12.0,
+              "rainfall_score": 0.15,
+              "water_level_score": 0.8,
+              "soil_moisture_score": 0.2143
+            },
+            "drivers": [
+              "critical water level (12.00 m)"
+            ],
+            "model_version": "flood-v1"
+          }
+        }
+      ],
+      "relationships": [
+        {
+          "from_state": "flood",
+          "to_state": "heat",
+          "relationship_type": "COMPOUND",
+          "rule_id": "HEAT-FLOOD-001",
+          "explanation": "Simultaneous occurrence of localized thermal extremes and hydrological flooding challenges simultaneous response logistics.",
+          "weight": 1.1400000000000001
+        }
+      ],
+      "evidence_ids": [
+        "HAZ-HEAT-TEL-SIM-BASE-01-1788782400",
+        "HAZ-FLOOD-TEL-SIM-BASE-01-1788782400"
+      ],
+      "rule_version": "compound-v1",
+      "provenance_hash": "e515c72d1680bcffd2356f547789449d0cc2e358ebe9d6b51b151c4c47ababd9",
+      "drivers": [
+        "Compound hazard condition detected: flood + heat",
+        "Interaction: Simultaneous occurrence of localized thermal extremes and hydrological flooding challenges simultaneous response logistics. (Rule: HEAT-FLOOD-001)",
+        "Mean severity 0.471 amplified by +0.15 compound interaction"
+      ],
+      "simulated": false
+    },
+    {
+      "event_id": "COMP-CASCADE-2406ED21",
+      "event_type": "CASCADE",
+      "severity": 0.6024,
+      "confidence": 0.7799,
+      "timestamp": "2026-09-07T12:00:00Z",
+      "chain": [
+        "flood",
+        "heat_flood_multihazard_stress"
+      ],
+      "contributing_states": [
+        {
+          "state_id": "flood",
+          "evidence_type": "OBSERVED",
+          "severity": 0.3936,
+          "confidence": 0.95,
+          "timestamp": "2026-09-07T12:00:00Z",
+          "forecast_horizon_minutes": 0,
+          "source_ref_id": "HAZ-FLOOD-TEL-SIM-BASE-01-1788782400",
+          "provenance_hash": "df9eccd2d310a96d8cad7e92ed1398761d74db616b46dfade1a74ab5fe415320",
+          "metadata": {
+            "features": {
+              "temperature_c": 33.0,
+              "humidity_pct": 65.0,
+              "rainfall_mmhr": 15.0,
+              "soil_moisture_pct": 45.0,
+              "water_level_m": 12.0,
+              "rainfall_score": 0.15,
+              "water_level_score": 0.8,
+              "soil_moisture_score": 0.2143
+            },
+            "drivers": [
+              "critical water level (12.00 m)"
+            ],
+            "model_version": "flood-v1"
+          }
+        },
+        {
+          "state_id": "heat_flood_multihazard_stress",
+          "evidence_type": "INFERRED",
+          "severity": 0.6113,
+          "confidence": 0.855,
+          "timestamp": "2026-09-07T12:00:00Z",
+          "forecast_horizon_minutes": 0,
+          "source_ref_id": "INFER-HEAT-FLOOD-001",
+          "provenance_hash": null,
+          "metadata": {
+            "inferred_by_rule": "HEAT-FLOOD-001"
+          }
+        }
+      ],
+      "relationships": [
+        {
+          "from_state": "flood",
+          "to_state": "heat_flood_multihazard_stress",
+          "relationship_type": "COMPOUND",
+          "rule_id": "HEAT-FLOOD-001",
+          "explanation": "Simultaneous occurrence of localized thermal extremes and hydrological flooding challenges simultaneous response logistics.",
+          "weight": 1.1400000000000001
+        }
+      ],
+      "evidence_ids": [
+        "HAZ-FLOOD-TEL-SIM-BASE-01-1788782400",
+        "INFER-HEAT-FLOOD-001"
+      ],
+      "rule_version": "compound-v1",
+      "provenance_hash": "2406ed219dd7fe812070212650b16af4c4c350c66621d3877eb2e81bbfe6fa9d",
+      "drivers": [
+        "Cascading chain detected (2 stages): flood -> heat_flood_multihazard_stress",
+        "Base contributor severity: 0.502 with +0.10 cascade amplification",
+        "Link [flood -> heat_flood_multihazard_stress]: Simultaneous occurrence of localized thermal extremes and hydrological flooding challenges simultaneous response logistics. (Rule: HEAT-FLOOD-001)"
+      ],
+      "simulated": false
+    }
+  ],
+  "vulnerability_zones": [
+    {
+      "assessment_id": "VULN-ZONE-METRO-01-D28EE5B9",
+      "zone_id": "ZONE-METRO-01",
+      "timestamp": "2026-09-07T12:00:00Z",
+      "forecast_horizon_minutes": 360,
+      "evidence_type": "OBSERVED",
+      "hazard_risk": 0.975,
+      "population_total": 12000,
+      "population_exposed": 11820,
+      "exposure_ratio": 0.985,
+      "vulnerability": 0.2205,
+      "accessibility": 0.5626,
+      "accessibility_risk": 0.4374,
+      "human_impact": 0.722,
+      "confidence": 0.3826,
+      "evidence_ids": [
+        "HAZ-HEAT-TEL-SIM-BASE-01-1788782400",
+        "HAZ-FLOOD-TEL-SIM-BASE-01-1788782400",
+        "HAZ-DROUGHT-TEL-SIM-BASE-01-1788782400",
+        "PRED-HEAT-TEL-SIM-BASE-01-30M-1788782400",
+        "PRED-FLOOD-TEL-SIM-BASE-01-30M-1788782400",
+        "PRED-DROUGHT-TEL-SIM-BASE-01-30M-1788782400",
+        "PRED-HEAT-TEL-SIM-BASE-01-60M-1788782400",
+        "PRED-FLOOD-TEL-SIM-BASE-01-60M-1788782400",
+        "PRED-DROUGHT-TEL-SIM-BASE-01-60M-1788782400",
+        "PRED-HEAT-TEL-SIM-BASE-01-360M-1788782400",
+        "PRED-FLOOD-TEL-SIM-BASE-01-360M-1788782400",
+        "PRED-DROUGHT-TEL-SIM-BASE-01-360M-1788782400",
+        "COMP-CASCADE-05DEBBBA",
+        "COMP-CASCADE-69FBB5A9",
+        "COMP-MULTI-E515C72D",
+        "COMP-CASCADE-2406ED21"
+      ],
+      "drivers": [
+        "Observed heat hazard severity: 0.55 (MODERATE)",
+        "Observed flood hazard severity: 0.39 (MODERATE)",
+        "Observed drought hazard severity: 0.18 (NORMAL)",
+        "Predicted heat (+30m) severity: 0.55",
+        "Predicted flood (+30m) severity: 0.39",
+        "Predicted drought (+30m) severity: 0.18",
+        "Predicted heat (+60m) severity: 0.55",
+        "Predicted flood (+60m) severity: 0.39",
+        "Predicted drought (+60m) severity: 0.18",
+        "Predicted heat (+360m) severity: 0.55",
+        "Predicted flood (+360m) severity: 0.39",
+        "Predicted drought (+360m) severity: 0.18",
+        "Phase 4 CASCADE event COMP-CASCADE-05DEBBBA (severity: 0.71)",
+        "Phase 4 CASCADE event COMP-CASCADE-69FBB5A9 (severity: 0.68)",
+        "Phase 4 COMPOUND event COMP-MULTI-E515C72D (severity: 0.62)",
+        "Phase 4 CASCADE event COMP-CASCADE-2406ED21 (severity: 0.60)",
+        "Exposure: 11,820 of 12,000 residents (98.5%)",
+        "Mitigating healthcare infrastructure present (access score 0.75)",
+        "Accessibility degraded by -31.8% due to cascading event COMP-CASCADE-05DEBBBA",
+        "Human Impact Risk Index: 0.72 (Formula: impact-v1)"
+      ],
+      "simulated": true,
+      "provenance_hash": "d28ee5b9af6eb045f42daaa8250f79c2950cbc44d59451cd6b8f0878ae4d6866",
+      "formula_version": "impact-v1"
+    }
+  ],
+  "evacuation_routes": [
+    {
+      "evacuation_id": "EVAC-ZONE-METRO-01-B821615B",
+      "zone_id": "ZONE-METRO-01",
+      "timestamp": "2026-09-07T12:00:00Z",
+      "forecast_horizon_minutes": 360,
+      "evidence_type": "OBSERVED",
+      "population_exposed": 11820,
+      "population_to_evacuate": 9913,
+      "priority": 0.5966,
+      "destination": {
+        "shelter_id": "SHELTER-NORTH-01",
+        "shelter_name": "North Valley Refuge Center",
+        "assigned_population": 7000,
+        "available_capacity_before": 7000,
+        "available_capacity_after": 0,
+        "shelter_safety_score": 0.95
+      },
+      "route": {
+        "route_id": "ROUTE-ZONE-METRO-01-SHELTER-NORTH-01-2E",
+        "origin_node": "ZONE-METRO-01",
+        "destination_node": "SHELTER-NORTH-01",
+        "nodes": [
+          "ZONE-METRO-01",
+          "INT-1",
+          "SHELTER-NORTH-01"
+        ],
+        "edge_ids": [
+          "ROAD-Z-N1",
+          "ROAD-N1-NORTH"
+        ],
+        "distance_km": 5.5,
+        "estimated_travel_minutes": 11.0,
+        "hazard_exposure": 0.075,
+        "accessibility": 0.925,
+        "safety_score": 0.925,
+        "total_cost": 14.925
+      },
+      "avoid_edges": [],
+      "status": "PARTIAL_CAPACITY",
+      "reason": "Partial capacity allocation: North Valley Refuge Center can accommodate 7,000 of 9,913 evacuees",
+      "no_route_reason": null,
+      "confidence": 0.6629,
+      "simulated": true,
+      "provenance_hash": "b821615bdba1eb9c86f00f2d7412dcbdd6a18ce75d332aad6366e0824fa98b1b",
+      "algorithm_version": "dijkstra-hazard-v1",
+      "cost_formula_version": "cost-v1",
+      "drivers": [
+        "Evacuation required: 9,913 of 11,820 exposed residents",
+        "Evacuation priority: 0.60 (Urgency: 0.50)",
+        "Route: 5.5 km (11.0 min), Safety score: 0.93"
+      ]
+    }
+  ],
+  "confidence": 0.85,
+  "provenance_hash": "4cc1c898934538a30bdf7df5c6ef381b63aef73a409c35bcc516f61e90f3f160"
+}

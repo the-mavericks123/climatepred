@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "node_id": "STATION-RIVER-004",
+  "timestamp": "2026-09-07T11:20:00Z",
+  "location": {
+    "lat": 25.5941,
+    "lon": 85.1376,
+    "elevation": 53.0
+  },
+  "measurements": {
+    "temperature": 21.4,
+    "humidity": 99.0,
+    "pressure": 988.1,
+    "rainfall": 115.0,
+    "soil_moisture": 100.0,
+    "water_level": 18.9,
+    "air_quality": 30.0
+  },
+  "quality": {
+    "valid": true,
+    "source": "ESP32",
+    "received_at": "2026-09-07T11:20:04Z",
+    "confidence": 0.99,
+    "anomaly_score": 0.85,
+    "flags": ["CRITICAL_FLOOD_STAGE", "EMERGENCY_OVERTOP_RISK"]
+  }
+}

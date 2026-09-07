@@ -1,0 +1,36 @@
+# Climate Eye View: God's Eye View (GEV) Layer Mapping Configuration
+
+layers:
+  hazard_flood:
+    id: "layer-flood-risk"
+    type: "raster-mesh"
+    color_ramp: "Blues"
+    opacity: 0.75
+    refresh_rate_sec: 10
+
+  hazard_heat:
+    id: "layer-heat-index"
+    type: "heatmap"
+    color_ramp: "YlOrRd"
+    opacity: 0.65
+    refresh_rate_sec: 30
+
+  vulnerability_zones:
+    id: "layer-demographic-exposure"
+    type: "choropleth"
+    color_ramp: "Purples"
+    opacity: 0.50
+    refresh_rate_sec: 60
+
+  evacuation_network:
+    id: "layer-evacuation-routing"
+    type: "line-vector"
+    active_color: "#22c55e" # Safe green
+    impassable_color: "#ef4444" # Impassable red
+    refresh_rate_sec: 5
+
+  shelter_locations:
+    id: "layer-emergency-shelters"
+    type: "symbol"
+    icon: "hospital-shield"
+    refresh_rate_sec: 15

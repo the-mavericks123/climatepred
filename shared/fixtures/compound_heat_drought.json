@@ -1,0 +1,58 @@
+{
+  "timestamp": "2026-09-07T12:00:00+00:00",
+  "hazards": [
+    {
+      "hazard_id": "HAZ-HEAT-01",
+      "hazard": "heat",
+      "severity": 0.78,
+      "confidence": 0.92,
+      "classification": "HIGH",
+      "status": "DETECTED",
+      "timestamp": "2026-09-07T12:00:00+00:00",
+      "forecast_horizon_minutes": 0,
+      "location": {
+        "lat": 25.5941,
+        "lon": 85.1376,
+        "elevation": 53.0
+      },
+      "features": {
+        "temperature": 43.5,
+        "humidity": 18.0
+      },
+      "drivers": [
+        "heat severity 0.78"
+      ],
+      "source": "model",
+      "model_version": "heat-v1",
+      "simulated": false,
+      "provenance_hash": "prov-haz-heat-01"
+    },
+    {
+      "hazard_id": "HAZ-DROUGHT-01",
+      "hazard": "drought",
+      "severity": 0.82,
+      "confidence": 0.88,
+      "classification": "HIGH",
+      "status": "DETECTED",
+      "timestamp": "2026-09-07T12:00:00+00:00",
+      "forecast_horizon_minutes": 0,
+      "location": {
+        "lat": 25.5941,
+        "lon": 85.1376,
+        "elevation": 53.0
+      },
+      "features": {
+        "soil_moisture": 8.0,
+        "temperature": 43.5
+      },
+      "drivers": [
+        "drought severity 0.82"
+      ],
+      "source": "model",
+      "model_version": "drought-v1",
+      "simulated": false,
+      "provenance_hash": "prov-haz-drought-01"
+    }
+  ],
+  "predictions": []
+}

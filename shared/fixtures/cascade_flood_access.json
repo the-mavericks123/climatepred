@@ -1,0 +1,32 @@
+{
+  "timestamp": "2026-09-07T12:00:00+00:00",
+  "hazards": [
+    {
+      "hazard_id": "HAZ-FLOOD-04",
+      "hazard": "flood",
+      "severity": 0.88,
+      "confidence": 0.94,
+      "classification": "HIGH",
+      "status": "DETECTED",
+      "timestamp": "2026-09-07T12:00:00+00:00",
+      "forecast_horizon_minutes": 0,
+      "location": {
+        "lat": 25.5941,
+        "lon": 85.1376,
+        "elevation": 53.0
+      },
+      "features": {
+        "water_level": 14.5,
+        "rainfall": 90.0
+      },
+      "drivers": [
+        "flood severity 0.88"
+      ],
+      "source": "model",
+      "model_version": "flood-v1",
+      "simulated": false,
+      "provenance_hash": "prov-haz-flood-04"
+    }
+  ],
+  "predictions": []
+}

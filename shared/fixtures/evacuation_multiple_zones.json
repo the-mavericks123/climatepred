@@ -1,0 +1,117 @@
+{
+  "scenario_id": "SCENARIO-9-MULTI-ZONE",
+  "description": "Two zones competing for shared shelter -> higher priority zone receives full allocation",
+  "zones": [
+    {
+      "zone_id": "ZONE-A",
+      "population": 4000,
+      "age_65_plus_ratio": 0.3,
+      "disability_ratio": 0.1,
+      "healthcare_access": 0.3,
+      "simulated": true
+    },
+    {
+      "zone_id": "ZONE-B",
+      "population": 4000,
+      "age_65_plus_ratio": 0.08,
+      "disability_ratio": 0.02,
+      "healthcare_access": 0.8,
+      "simulated": true
+    }
+  ],
+  "shelters": [
+    {
+      "shelter_id": "SHELTER-SHARED",
+      "name": "Central Shared Facility",
+      "latitude": 37.77,
+      "longitude": -122.4,
+      "capacity": 5000,
+      "current_occupancy": 0,
+      "accessibility": 0.95,
+      "safe": true,
+      "hazard_risk": 0.05,
+      "node_id": "SHELTER-SHARED",
+      "simulated": true
+    }
+  ],
+  "road_network": {
+    "network_id": "NET-MULTI-ZONE",
+    "nodes": [
+      "ZONE-A",
+      "ZONE-B",
+      "SHELTER-SHARED"
+    ],
+    "edges": [
+      {
+        "edge_id": "ROAD-A-SHARED",
+        "from_node": "ZONE-A",
+        "to_node": "SHELTER-SHARED",
+        "distance_km": 4.0,
+        "travel_time_minutes": 8.0,
+        "accessibility": 0.9,
+        "hazard_risk": 0.05,
+        "closed": false,
+        "simulated": true
+      },
+      {
+        "edge_id": "ROAD-B-SHARED",
+        "from_node": "ZONE-B",
+        "to_node": "SHELTER-SHARED",
+        "distance_km": 4.0,
+        "travel_time_minutes": 8.0,
+        "accessibility": 0.9,
+        "hazard_risk": 0.05,
+        "closed": false,
+        "simulated": true
+      }
+    ]
+  },
+  "hazards": [
+    {
+      "hazard_id": "HAZ-FLD-A",
+      "hazard": "flood",
+      "status": "DETECTED",
+      "severity": 0.95,
+      "confidence": 0.9,
+      "classification": "CRITICAL",
+      "timestamp": "2026-09-07T14:30:00Z",
+      "forecast_horizon_minutes": 0,
+      "location": {
+        "lat": 37.77,
+        "lon": -122.41
+      },
+      "features": {
+        "zone_id": "ZONE-A"
+      },
+      "drivers": [
+        "High severity flood"
+      ],
+      "model_version": "flood-v1",
+      "provenance_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "simulated": false
+    },
+    {
+      "hazard_id": "HAZ-FLD-B",
+      "hazard": "flood",
+      "status": "DETECTED",
+      "severity": 0.7,
+      "confidence": 0.88,
+      "classification": "HIGH",
+      "timestamp": "2026-09-07T14:30:00Z",
+      "forecast_horizon_minutes": 0,
+      "location": {
+        "lat": 37.75,
+        "lon": -122.43
+      },
+      "features": {
+        "zone_id": "ZONE-B"
+      },
+      "drivers": [
+        "Moderate flood"
+      ],
+      "model_version": "flood-v1",
+      "provenance_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "simulated": false
+    }
+  ]
+}

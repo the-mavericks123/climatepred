@@ -1,0 +1,21 @@
+# Topic Access Control List (ACL) for Climate Eye View
+# Restricts hardware sensor nodes to their own telemetry topics
+# and grants the S2 backend permissions to subscribe to telemetry and dispatch alerts/commands.
+
+# Pattern for individual sensor nodes (%u is username matching node_id, e.g. NODE-FLOOD-001)
+pattern readwrite climate/nodes/%u/telemetry
+pattern readwrite climate/nodes/%u/status
+pattern readwrite climate/nodes/%u/heartbeat
+pattern read climate/commands/%u
+
+# S2 Intelligence Backend Subscriber & Dispatcher
+user climate_backend
+topic read climate/nodes/+/telemetry
+topic read climate/nodes/+/status
+topic read climate/nodes/+/heartbeat
+topic write climate/alerts
+topic write climate/commands/#
+
+# Emergency Response Admin
+user climate_admin
+topic readwrite climate/#

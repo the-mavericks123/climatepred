@@ -1,0 +1,58 @@
+{
+  "timestamp": "2026-09-07T12:00:00+00:00",
+  "hazards": [
+    {
+      "hazard_id": "HAZ-HEAT-NORM",
+      "hazard": "heat",
+      "severity": 0.15,
+      "confidence": 0.95,
+      "classification": "MODERATE",
+      "status": "DETECTED",
+      "timestamp": "2026-09-07T12:00:00+00:00",
+      "forecast_horizon_minutes": 0,
+      "location": {
+        "lat": 25.5941,
+        "lon": 85.1376,
+        "elevation": 53.0
+      },
+      "features": {
+        "temperature": 24.0,
+        "humidity": 50.0
+      },
+      "drivers": [
+        "heat severity 0.15"
+      ],
+      "source": "model",
+      "model_version": "heat-v1",
+      "simulated": false,
+      "provenance_hash": "prov-haz-heat-norm"
+    },
+    {
+      "hazard_id": "HAZ-FLOOD-NORM",
+      "hazard": "flood",
+      "severity": 0.1,
+      "confidence": 0.95,
+      "classification": "MODERATE",
+      "status": "DETECTED",
+      "timestamp": "2026-09-07T12:00:00+00:00",
+      "forecast_horizon_minutes": 0,
+      "location": {
+        "lat": 25.5941,
+        "lon": 85.1376,
+        "elevation": 53.0
+      },
+      "features": {
+        "water_level": 1.0,
+        "rainfall": 0.0
+      },
+      "drivers": [
+        "flood severity 0.10"
+      ],
+      "source": "model",
+      "model_version": "flood-v1",
+      "simulated": false,
+      "provenance_hash": "prov-haz-flood-norm"
+    }
+  ],
+  "predictions": []
+}

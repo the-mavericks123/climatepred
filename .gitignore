@@ -21,3 +21,10 @@ htmlcov/
 node_modules/
 dist/
 build/
+
+# Database files & caches
+*.db
+*.sqlite
+*.sqlite3
+.DS_Store
+Thumbs.db

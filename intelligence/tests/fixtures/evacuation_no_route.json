@@ -1,0 +1,72 @@
+{
+  "scenario_id": "SCENARIO-10-NO-ROUTE",
+  "description": "All access routes collapsed/closed -> NO_ROUTE status and ALL_ROADS_CLOSED reason",
+  "zones": [
+    {
+      "zone_id": "ZONE-ISOLATED",
+      "population": 5000,
+      "simulated": true
+    }
+  ],
+  "shelters": [
+    {
+      "shelter_id": "SHELTER-NORTH",
+      "name": "North Civic Center",
+      "latitude": 37.78,
+      "longitude": -122.4,
+      "capacity": 10000,
+      "current_occupancy": 0,
+      "accessibility": 0.95,
+      "safe": true,
+      "hazard_risk": 0.05,
+      "node_id": "SHELTER-NORTH",
+      "simulated": true
+    }
+  ],
+  "road_network": {
+    "network_id": "NET-ISOLATED",
+    "nodes": [
+      "ZONE-ISOLATED",
+      "SHELTER-NORTH"
+    ],
+    "edges": [
+      {
+        "edge_id": "ROAD-COLLAPSED",
+        "from_node": "ZONE-ISOLATED",
+        "to_node": "SHELTER-NORTH",
+        "distance_km": 4.0,
+        "travel_time_minutes": 8.0,
+        "accessibility": 0.0,
+        "hazard_risk": 0.98,
+        "closed": true,
+        "closure_reason": "Bridge collapse",
+        "simulated": true
+      }
+    ]
+  },
+  "hazards": [
+    {
+      "hazard_id": "HAZ-FLD-ISO",
+      "hazard": "flood",
+      "status": "DETECTED",
+      "severity": 0.95,
+      "confidence": 0.9,
+      "classification": "CRITICAL",
+      "timestamp": "2026-09-07T14:30:00Z",
+      "forecast_horizon_minutes": 0,
+      "location": {
+        "lat": 37.77,
+        "lon": -122.41
+      },
+      "features": {
+        "zone_id": "ZONE-ISOLATED"
+      },
+      "drivers": [
+        "Catastrophic flooding"
+      ],
+      "model_version": "flood-v1",
+      "provenance_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "simulated": false
+    }
+  ]
+}

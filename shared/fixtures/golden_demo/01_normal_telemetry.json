@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "node_id": "NODE-001",
+  "timestamp": "2026-09-07T12:00:00Z",
+  "latitude": 37.7749,
+  "longitude": -122.4194,
+  "temperature": 22.0,
+  "humidity": 55.0,
+  "pressure": 1013.25,
+  "rainfall": 0.0,
+  "soil_moisture": 25.0,
+  "water_level": 0.8,
+  "air_quality": 45.0,
+  "battery": 98.0
+}

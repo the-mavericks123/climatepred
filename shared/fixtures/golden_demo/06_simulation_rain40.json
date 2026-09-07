@@ -1,0 +1,10 @@
+{
+  "scenario_id": "SCENARIO_RAIN_40",
+  "base_state": "current",
+  "changes": {
+    "rainfall_multiplier": 1.40,
+    "temperature_offset_celsius": 0.0,
+    "soil_moisture_offset": 0.15,
+    "infrastructure_damage_factor": 0.20
+  }
+}

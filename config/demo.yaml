@@ -1,0 +1,28 @@
+# Climate Eye View: Demonstration & Drill Configuration Profile
+
+demo:
+  enabled: true
+  target_region: "Mumbai Metropolitan Region"
+  bounding_box:
+    min_lat: 18.89
+    max_lat: 19.30
+    min_lon: 72.75
+    max_lon: 73.10
+  sample_nodes:
+    - id: "NODE-MUM-01"
+      name: "Mithi River Basin Station"
+      lat: 19.0760
+      lon: 72.8777
+      elevation_m: 8.5
+    - id: "NODE-MUM-02"
+      name: "Dharavi Urban Drainage Node"
+      lat: 19.0434
+      lon: 72.8567
+      elevation_m: 4.2
+  scenarios:
+    - id: "SCN-MONSOON-200"
+      name: "Extreme 200mm Monsoon Downpour"
+      rainfall_multiplier: 2.0
+    - id: "SCN-HEATWAVE-45"
+      name: "Severe 45C Heatwave & Inversion"
+      temperature_delta: 7.0

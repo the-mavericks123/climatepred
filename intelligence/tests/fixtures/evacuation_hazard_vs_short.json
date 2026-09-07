@@ -1,0 +1,108 @@
+{
+  "scenario_id": "SCENARIO-5-HAZARD-VS-SHORT",
+  "description": "Short route has extreme hazard -> algorithm must choose longer safe route",
+  "zones": [
+    {
+      "zone_id": "ZONE-A",
+      "population": 5000,
+      "healthcare_access": 0.6,
+      "road_accessibility": 0.8,
+      "simulated": true
+    }
+  ],
+  "shelters": [
+    {
+      "shelter_id": "SHELTER-SAFE",
+      "name": "Highland Safe Refuge",
+      "latitude": 37.8,
+      "longitude": -122.38,
+      "capacity": 8000,
+      "current_occupancy": 500,
+      "accessibility": 0.95,
+      "safe": true,
+      "hazard_risk": 0.05,
+      "node_id": "SHELTER-SAFE",
+      "simulated": true
+    }
+  ],
+  "road_network": {
+    "network_id": "NET-COMPARE",
+    "nodes": [
+      "ZONE-A",
+      "INT-DANGER",
+      "INT-SAFE",
+      "SHELTER-SAFE"
+    ],
+    "edges": [
+      {
+        "edge_id": "ROAD-SHORT-DANGEROUS",
+        "from_node": "ZONE-A",
+        "to_node": "INT-DANGER",
+        "distance_km": 2.0,
+        "travel_time_minutes": 4.0,
+        "accessibility": 0.9,
+        "hazard_risk": 0.9,
+        "closed": false,
+        "simulated": true
+      },
+      {
+        "edge_id": "ROAD-DANGER-SHELTER",
+        "from_node": "INT-DANGER",
+        "to_node": "SHELTER-SAFE",
+        "distance_km": 2.0,
+        "travel_time_minutes": 4.0,
+        "accessibility": 0.9,
+        "hazard_risk": 0.85,
+        "closed": false,
+        "simulated": true
+      },
+      {
+        "edge_id": "ROAD-LONG-SAFE",
+        "from_node": "ZONE-A",
+        "to_node": "INT-SAFE",
+        "distance_km": 5.0,
+        "travel_time_minutes": 10.0,
+        "accessibility": 0.95,
+        "hazard_risk": 0.05,
+        "closed": false,
+        "simulated": true
+      },
+      {
+        "edge_id": "ROAD-SAFE-SHELTER",
+        "from_node": "INT-SAFE",
+        "to_node": "SHELTER-SAFE",
+        "distance_km": 4.0,
+        "travel_time_minutes": 8.0,
+        "accessibility": 0.95,
+        "hazard_risk": 0.05,
+        "closed": false,
+        "simulated": true
+      }
+    ]
+  },
+  "hazards": [
+    {
+      "hazard_id": "HAZ-FLD-03",
+      "hazard": "flood",
+      "status": "DETECTED",
+      "severity": 0.85,
+      "confidence": 0.9,
+      "classification": "CRITICAL",
+      "timestamp": "2026-09-07T14:30:00Z",
+      "forecast_horizon_minutes": 0,
+      "location": {
+        "lat": 37.77,
+        "lon": -122.41
+      },
+      "features": {
+        "zone_id": "ZONE-A"
+      },
+      "drivers": [
+        "Severe surface inundation"
+      ],
+      "model_version": "flood-v1",
+      "provenance_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "simulated": false
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "timestamp": "2026-09-07T12:00:00+00:00",
+  "hazards": [
+    {
+      "hazard_id": "HAZ-HEAT-05",
+      "hazard": "heat",
+      "severity": 0.74,
+      "confidence": 0.9,
+      "classification": "HIGH",
+      "status": "DETECTED",
+      "timestamp": "2026-09-07T12:00:00+00:00",
+      "forecast_horizon_minutes": 0,
+      "location": {
+        "lat": 25.5941,
+        "lon": 85.1376,
+        "elevation": 53.0
+      },
+      "features": {
+        "temperature": 42.0,
+        "humidity": 15.0
+      },
+      "drivers": [
+        "heat severity 0.74"
+      ],
+      "source": "model",
+      "model_version": "heat-v1",
+      "simulated": false,
+      "provenance_hash": "prov-haz-heat-05"
+    },
+    {
+      "hazard_id": "HAZ-DROUGHT-05",
+      "hazard": "drought",
+      "severity": 0.8,
+      "confidence": 0.88,
+      "classification": "HIGH",
+      "status": "DETECTED",
+      "timestamp": "2026-09-07T12:00:00+00:00",
+      "forecast_horizon_minutes": 0,
+      "location": {
+        "lat": 25.5941,
+        "lon": 85.1376,
+        "elevation": 53.0
+      },
+      "features": {
+        "soil_moisture": 10.0
+      },
+      "drivers": [
+        "drought severity 0.80"
+      ],
+      "source": "model",
+      "model_version": "drought-v1",
+      "simulated": false,
+      "provenance_hash": "prov-haz-drought-05"
+    }
+  ],
+  "predictions": [
+    {
+      "prediction_id": "PRED-FLOOD-05",
+      "hazard": "flood",
+      "prediction_time": "2026-09-07T12:00:00+00:00",
+      "forecast_time": "2026-09-07T12:30:00+00:00",
+      "forecast_horizon_minutes": 30,
+      "severity": 0.75,
+      "confidence": 0.86,
+      "classification": "HIGH",
+      "status": "DETECTED",
+      "model_version": "flood-pred-v1",
+      "source_hazard_id": "HAZ-PRED-FLOOD-05",
+      "provenance_hash": "prov-pred-flood-05",
+      "drivers": [
+        "predicted flood severity 0.75 at +30m"
+      ],
+      "data_quality": {
+        "sample_count": 5
+      },
+      "predicted_features": {
+        "water_level": 9.0,
+        "rainfall": 75.0
+      },
+      "simulated": false
+    }
+  ]
+}

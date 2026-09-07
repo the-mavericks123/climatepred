@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "node_id": "STATION-INVALID-999",
+  "timestamp": "2026-09-07T10:00:00Z",
+  "location": {
+    "lat": 125.5,
+    "lon": -240.0
+  },
+  "measurements": {
+    "temperature": 150.0,
+    "humidity": 140.0,
+    "pressure": 500.0,
+    "rainfall": -15.0,
+    "soil_moisture": -5.0,
+    "water_level": 80.0
+  },
+  "quality": {
+    "valid": false,
+    "source": "ESP32",
+    "received_at": "2026-09-07T10:00:01Z"
+  }
+}

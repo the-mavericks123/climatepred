@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "node_id": "STATION-STALE-006",
+  "timestamp": "2026-09-05T08:00:00Z",
+  "location": {
+    "lat": 13.0827,
+    "lon": 80.2707
+  },
+  "measurements": {
+    "temperature": 29.5,
+    "humidity": 70.0,
+    "pressure": 1009.0,
+    "rainfall": 2.0,
+    "soil_moisture": 50.0,
+    "water_level": 1.5,
+    "air_quality": 65.0
+  },
+  "quality": {
+    "valid": true,
+    "source": "ESP32",
+    "received_at": "2026-09-07T10:00:00Z",
+    "confidence": 0.40,
+    "flags": ["STALE_BUFFERED_DATA"]
+  }
+}

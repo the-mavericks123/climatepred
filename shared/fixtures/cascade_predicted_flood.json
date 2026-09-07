@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-09-07T12:00:00+00:00",
+  "hazards": [],
+  "predictions": [
+    {
+      "prediction_id": "PRED-FLOOD-60M",
+      "hazard": "flood",
+      "prediction_time": "2026-09-07T12:00:00+00:00",
+      "forecast_time": "2026-09-07T13:00:00+00:00",
+      "forecast_horizon_minutes": 60,
+      "severity": 0.84,
+      "confidence": 0.88,
+      "classification": "HIGH",
+      "status": "DETECTED",
+      "model_version": "flood-pred-v1",
+      "source_hazard_id": "HAZ-PRED-FLOOD-60M",
+      "provenance_hash": "prov-pred-flood-60m",
+      "drivers": [
+        "predicted flood severity 0.84 at +60m"
+      ],
+      "data_quality": {
+        "sample_count": 5
+      },
+      "predicted_features": {
+        "water_level": 12.0,
+        "rainfall": 60.0
+      },
+      "simulated": false
+    }
+  ]
+}
