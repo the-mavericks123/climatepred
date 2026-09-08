@@ -119,9 +119,21 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"MQTT auto-start note: {e}")
 
+    # Start periodic external data ingestion scheduler
+    from intelligence.external_data.scheduler import get_external_data_scheduler
+    ext_scheduler = get_external_data_scheduler()
+    try:
+        await ext_scheduler.start()
+    except Exception as e:
+        logger.warning(f"External scheduler auto-start note: {e}")
+
     yield
 
     logger.info("Climate Eye View S2 Intelligence Service shutting down...")
+    try:
+        await ext_scheduler.stop()
+    except Exception as e:
+        logger.warning(f"External scheduler stop note: {e}")
     try:
         mqtt_client.stop()
     except Exception as e:
@@ -420,6 +432,8 @@ async def list_sources(
 
 
 @app.post(f"{settings.api_prefix}/telemetry/validate", tags=["Telemetry"])
+@app.post(f"{settings.api_prefix}/telemetry", tags=["Telemetry"])
+@app.post("/api/telemetry", tags=["Telemetry"])
 async def validate_telemetry_packet(
     payload: Dict[str, Any],
     request: Request,
@@ -446,15 +460,68 @@ async def validate_telemetry_packet(
     try:
         repo = get_repository()
         repo.save_telemetry(telemetry, provenance_hash=provenance_record.record_hash)
+
+        # 1. Broadcast node.updated
         realtime_broadcaster.broadcast_sync(
-            "telemetry.updated",
+            "node.updated",
             {
-                "telemetry": telemetry.model_dump(),
-                "provenance": provenance_record.model_dump(),
-                "source": "REST",
-                "status": "LIVE",
+                "node_id": telemetry.node_id,
+                "latitude": telemetry.location.latitude,
+                "longitude": telemetry.location.longitude,
+                "status": "online",
+                "timestamp": telemetry.timestamp.isoformat(),
             },
         )
+
+        # 2. Broadcast telemetry.updated with both flat fields and nested model
+        telemetry_dict = telemetry.model_dump()
+        broadcast_payload = {
+            **telemetry_dict,
+            "node_id": telemetry.node_id,
+            "latitude": telemetry.location.latitude,
+            "longitude": telemetry.location.longitude,
+            "temperature": telemetry.measurements.temperature,
+            "humidity": telemetry.measurements.humidity,
+            "pressure": telemetry.measurements.pressure,
+            "rainfall": telemetry.measurements.rainfall,
+            "soil_moisture": telemetry.measurements.soil_moisture,
+            "water_level": telemetry.measurements.water_level,
+            "air_quality": telemetry.measurements.air_quality,
+            "battery": telemetry.measurements.battery,
+            "timestamp": telemetry.timestamp.isoformat(),
+            "telemetry": telemetry_dict,
+            "provenance": provenance_record.model_dump(),
+            "source": "REST",
+            "status": "LIVE",
+        }
+        realtime_broadcaster.broadcast_sync("telemetry.updated", broadcast_payload)
+
+        # 3. Evaluate hazards automatically
+        try:
+            hazard_engine = get_hazard_engine()
+            hazard_results = hazard_engine.evaluate_telemetry(telemetry=telemetry)
+            if hazard_results:
+                for res in hazard_results:
+                    repo.save_hazard_event(
+                        event_id=res.hazard_id,
+                        hazard_type=res.hazard.value,
+                        severity=res.severity,
+                        confidence=res.confidence,
+                        detected_at=res.timestamp,
+                        node_id=telemetry.node_id,
+                        evidence={"drivers": res.drivers, "features": res.features},
+                    )
+                realtime_broadcaster.broadcast_sync(
+                    "hazard.updated",
+                    {
+                        "node_id": telemetry.node_id,
+                        "hazards": [result.model_dump() for result in hazard_results],
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
+                )
+        except Exception as hz_exc:
+            logger.debug(f"Hazard auto-eval note: {hz_exc}")
+
     except Exception as persist_exc:
         logger.warning(f"Telemetry persistence/broadcast note: {persist_exc}")
 
@@ -463,6 +530,49 @@ async def validate_telemetry_packet(
         "valid": True,
         "telemetry": telemetry.model_dump(),
         "provenance": provenance_record.model_dump(),
+        "request_id": request_id,
+    }
+
+
+@app.get(f"{settings.api_prefix}/nodes", tags=["Telemetry"])
+@app.get("/api/nodes", tags=["Telemetry"])
+async def list_nodes_endpoint(
+    request: Request,
+):
+    """
+    Returns registered sensor nodes from repository.
+    """
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    repo = get_repository()
+    nodes = repo.list_nodes()
+    return {
+        "success": True,
+        "nodes": nodes,
+        "count": len(nodes),
+        "request_id": request_id,
+    }
+
+
+@app.get(f"{settings.api_prefix}/telemetry", tags=["Telemetry"])
+@app.get("/api/telemetry", tags=["Telemetry"])
+async def get_telemetry_endpoint(
+    request: Request,
+    node_id: Optional[str] = None,
+    limit: int = 50,
+):
+    """
+    Returns historical or latest telemetry readings.
+    """
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    repo = get_repository()
+    if node_id:
+        readings = repo.get_telemetry(node_id=node_id, limit=limit)
+    else:
+        readings = repo.get_latest_readings(limit=limit)
+    return {
+        "success": True,
+        "telemetry": readings,
+        "count": len(readings),
         "request_id": request_id,
     }
 
@@ -566,6 +676,79 @@ async def evaluate_hazards(
     return {
         "success": True,
         "hazards": [result.model_dump() for result in results],
+        "request_id": request_id,
+    }
+
+
+@app.get(f"{settings.api_prefix}/hazards/current", tags=["Hazards"])
+@app.get("/api/hazards/current", tags=["Hazards"])
+async def get_current_hazards(
+    request: Request,
+    node_id: Optional[str] = None,
+    engine = Depends(get_hazard_engine),
+):
+    """
+    Retrieves current active hazard assessments.
+    Returns persisted hazard events or dynamically evaluates latest telemetry.
+    """
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    repo = get_repository()
+
+    events = repo.get_hazard_events(node_id=node_id, limit=50)
+    if events:
+        return {
+            "success": True,
+            "hazards": events,
+            "count": len(events),
+            "request_id": request_id,
+        }
+
+    readings = repo.get_telemetry(node_id=node_id, limit=1) if node_id else repo.get_latest_readings(limit=1)
+    if readings:
+        raw_reading = readings[0]
+        telemetry_dict = {
+            "schema_version": "1.0",
+            "node_id": raw_reading.get("node_id", "NODE-001"),
+            "timestamp": raw_reading.get("timestamp"),
+            "received_at": raw_reading.get("received_at") or raw_reading.get("timestamp"),
+            "location": {
+                "lat": raw_reading.get("latitude", 0.0),
+                "lon": raw_reading.get("longitude", 0.0),
+                "elevation": raw_reading.get("elevation", 0.0),
+            },
+            "measurements": {
+                "temperature": raw_reading.get("temperature"),
+                "humidity": raw_reading.get("humidity"),
+                "pressure": raw_reading.get("pressure"),
+                "rainfall": raw_reading.get("rainfall"),
+                "soil_moisture": raw_reading.get("soil_moisture"),
+                "water_level": raw_reading.get("water_level"),
+                "air_quality": raw_reading.get("air_quality"),
+                "battery": raw_reading.get("battery"),
+            },
+            "sensor_status": {},
+        }
+        is_valid, telem, _ = TelemetryValidator.validate_dict(telemetry_dict)
+        if is_valid and telem:
+            results = engine.evaluate_telemetry(telem)
+            dict_results = []
+            for r in results:
+                d = r.model_dump()
+                h_val = r.hazard.value if hasattr(r.hazard, "value") else str(d.get("hazard", ""))
+                d["hazard"] = h_val
+                d["hazard_type"] = h_val.upper()
+                dict_results.append(d)
+            return {
+                "success": True,
+                "hazards": dict_results,
+                "count": len(dict_results),
+                "request_id": request_id,
+            }
+
+    return {
+        "success": True,
+        "hazards": [],
+        "count": 0,
         "request_id": request_id,
     }
 
@@ -747,6 +930,88 @@ async def evaluate_predictions(
     }
 
 
+@app.get(f"{settings.api_prefix}/hazards/predictions", tags=["Predictions"])
+@app.get("/api/hazards/predictions", tags=["Predictions"])
+async def get_current_predictions(
+    request: Request,
+    node_id: Optional[str] = None,
+    engine = Depends(get_prediction_engine),
+):
+    """
+    Retrieves current multi-horizon hazard predictions (+30m, +60m, +360m).
+    Returns persisted predictions or dynamically evaluates latest telemetry history.
+    """
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    repo = get_repository()
+
+    preds = repo.get_predictions(node_id=node_id)
+    if preds:
+        return {
+            "success": True,
+            "predictions": preds,
+            "count": len(preds),
+            "request_id": request_id,
+        }
+
+    readings = repo.get_telemetry(node_id=node_id, limit=10) if node_id else repo.get_latest_readings(limit=10)
+    if readings:
+        parsed_readings = []
+        for r in readings:
+            t_dict = {
+                "schema_version": "1.0",
+                "node_id": r.get("node_id", "NODE-001"),
+                "timestamp": r.get("timestamp"),
+                "received_at": r.get("received_at") or r.get("timestamp"),
+                "location": {
+                    "lat": r.get("latitude", 0.0),
+                    "lon": r.get("longitude", 0.0),
+                    "elevation": r.get("elevation", 0.0),
+                },
+                "measurements": {
+                    "temperature": r.get("temperature"),
+                    "humidity": r.get("humidity"),
+                    "pressure": r.get("pressure"),
+                    "rainfall": r.get("rainfall"),
+                    "soil_moisture": r.get("soil_moisture"),
+                    "water_level": r.get("water_level"),
+                    "air_quality": r.get("air_quality"),
+                    "battery": r.get("battery"),
+                },
+                "sensor_status": {},
+            }
+            v, telem, _ = TelemetryValidator.validate_dict(t_dict)
+            if v and telem:
+                parsed_readings.append(telem)
+
+        if parsed_readings:
+            current_t = parsed_readings[0]
+            history_t = parsed_readings[1:]
+            eval_preds = engine.evaluate_predictions(current_t, history_t)
+            dict_preds = []
+            for p in eval_preds:
+                pd = p.model_dump()
+                h_val = p.hazard.value if hasattr(p.hazard, "value") else str(pd.get("hazard", ""))
+                pd["hazard"] = h_val
+                pd["target_hazard"] = h_val
+                pd["hazard_type"] = h_val.upper()
+                pd["horizon_minutes"] = p.forecast_horizon_minutes
+                pd["predicted_severity"] = p.severity
+                dict_preds.append(pd)
+            return {
+                "success": True,
+                "predictions": dict_preds,
+                "count": len(dict_preds),
+                "request_id": request_id,
+            }
+
+    return {
+        "success": True,
+        "predictions": [],
+        "count": 0,
+        "request_id": request_id,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Phase 4: Compound & Cascading Disaster Endpoints
 # ---------------------------------------------------------------------------
@@ -876,6 +1141,8 @@ async def evaluate_compound_hazards(
 
 
 @app.get("/api/v1/compound-events/current", tags=["Compound Intelligence"])
+@app.get("/api/v1/compound", tags=["Compound Intelligence"])
+@app.get("/api/compound", tags=["Compound Intelligence"])
 async def get_current_compound_events(
     request: Request,
     compound_engine=Depends(get_compound_engine),
@@ -1055,6 +1322,8 @@ async def evaluate_vulnerability(
 
 
 @app.get("/api/v1/vulnerability/zones", tags=["Vulnerability Intelligence"])
+@app.get("/api/v1/vulnerability", tags=["Vulnerability Intelligence"])
+@app.get("/api/vulnerability", tags=["Vulnerability Intelligence"])
 async def get_vulnerability_zones(
     request: Request,
     vulnerability_engine=Depends(get_vulnerability_engine),
@@ -1333,6 +1602,8 @@ async def evaluate_evacuation(
 
 
 @app.get("/api/v1/evacuation/routes", tags=["Evacuation Intelligence"])
+@app.get("/api/v1/evacuation", tags=["Evacuation Intelligence"])
+@app.get("/api/evacuation", tags=["Evacuation Intelligence"])
 async def get_evacuation_routes(
     request: Request,
     evacuation_engine=Depends(get_evacuation_engine),
@@ -1380,6 +1651,7 @@ async def get_evacuation_current(
 # ---------------------------------------------------------------------------
 
 @app.get("/api/v1/simulation/scenarios", tags=["Scenario Simulation"])
+@app.get("/api/simulation/scenarios", tags=["Scenario Simulation"])
 async def list_simulation_scenarios(
     request: Request,
     simulation_engine=Depends(get_simulation_engine),
@@ -1399,6 +1671,11 @@ async def list_simulation_scenarios(
 
 @app.post(
     "/api/v1/simulation/run",
+    tags=["Scenario Simulation"],
+    dependencies=[Depends(require_role(Role.OPERATOR)), Depends(limit_rate(cost=1.0))],
+)
+@app.post(
+    "/api/simulation/run",
     tags=["Scenario Simulation"],
     dependencies=[Depends(require_role(Role.OPERATOR)), Depends(limit_rate(cost=1.0))],
 )
@@ -1515,6 +1792,21 @@ async def run_scenario_simulation(
                 ).model_dump(),
             )
 
+    if scenario_id in ["RAIN_PLUS_40", "Rain +40%"]:
+        scenario_id = "SCN-RAIN-40"
+    elif scenario_id in ["RAIN_PLUS_20", "Rain +20%"]:
+        scenario_id = "SCN-RAIN-20"
+    elif scenario_id in ["RAIN_PLUS_60", "Rain +60%"]:
+        scenario_id = "SCN-RAIN-60"
+    elif scenario_id in ["EXTREME_HEAT", "Extreme Heat"]:
+        scenario_id = "SCN-EXTREME-HEAT"
+    elif scenario_id in ["DRAINAGE_FAILURE", "Drainage Failure"]:
+        scenario_id = "SCN-DRAINAGE-FAIL"
+    elif scenario_id in ["ROAD_DEGRADE", "Road Accessibility -50%"]:
+        scenario_id = "SCN-ROAD-DEGRADE"
+    elif scenario_id in ["FLOOD_HEAT", "Flood + Heat"]:
+        scenario_id = "SCN-FLOOD-HEAT"
+
     # 4. Execute simulation through engine
     try:
         result = simulation_engine.run_simulation(
@@ -1535,11 +1827,13 @@ async def run_scenario_simulation(
         except Exception as sim_exc:
             logger.warning(f"Simulation broadcast note: {sim_exc}")
 
-        return SimulationRunResponse(
+        resp_dict = SimulationRunResponse(
             success=True,
             simulation=result,
             request_id=request_id,
         ).model_dump()
+        resp_dict["result"] = resp_dict.get("simulation")
+        return resp_dict
 
     except StaleDataException as sde:
         return JSONResponse(
@@ -1635,6 +1929,8 @@ async def get_simulation_result(
 # ---------------------------------------------------------------------------
 
 @app.get("/api/v1/response/current", tags=["Emergency Response Planning"])
+@app.get("/api/v1/response", tags=["Emergency Response Planning"])
+@app.get("/api/response", tags=["Emergency Response Planning"])
 async def get_current_response_plan(
     request: Request,
     response_engine=Depends(get_response_engine),
@@ -1820,6 +2116,7 @@ async def simulate_response_plan_endpoint(
 # ---------------------------------------------------------------------------
 
 @app.get("/api/v1/explainability/{target_type}/{target_id}", tags=["Explainability"])
+@app.get("/api/explainability/{target_type}/{target_id}", tags=["Explainability"])
 async def get_explanation_endpoint(
     target_type: str,
     target_id: str,
@@ -2165,6 +2462,222 @@ async def evaluate_drift_endpoint(
                 request_id=request_id,
             ).model_dump(),
         )
+
+
+# ---------------------------------------------------------------------------
+# Global Live Data Ingestion & Multi-Source Fusion Endpoints
+# ---------------------------------------------------------------------------
+from intelligence.external_data.service import get_external_data_service
+
+
+@app.get(f"{settings.api_prefix}/global/observations", tags=["Global Live Data"])
+@app.get("/api/global/observations", tags=["Global Live Data"])
+async def get_global_observations(
+    request: Request,
+    source: Optional[str] = None,
+    limit: int = 50,
+):
+    """Returns normalized canonical external observations from global grid."""
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    service = get_external_data_service()
+    obs = service.get_observations()
+    if source:
+        obs = [o for o in obs if o.source.lower() == source.lower()]
+    return {
+        "success": True,
+        "observations": [o.model_dump() for o in obs[:limit]],
+        "count": len(obs[:limit]),
+        "total": len(obs),
+        "request_id": request_id,
+    }
+
+
+@app.get(f"{settings.api_prefix}/global/weather", tags=["Global Live Data"])
+@app.get("/api/global/weather", tags=["Global Live Data"])
+async def get_global_weather(
+    request: Request,
+    lat: Optional[float] = None,
+    lon: Optional[float] = None,
+):
+    """
+    Returns global meteorological observations.
+    If lat and lon are provided, returns closest station or live point weather.
+    """
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    service = get_external_data_service()
+    if lat is not None and lon is not None:
+        obs = service.open_meteo.fetch_point_weather(lat=lat, lon=lon)
+        return {
+            "success": True,
+            "weather": obs.model_dump() if obs else None,
+            "request_id": request_id,
+        }
+
+    obs = service.get_observations()
+    return {
+        "success": True,
+        "stations": [o.model_dump() for o in obs],
+        "count": len(obs),
+        "request_id": request_id,
+    }
+
+
+@app.get(f"{settings.api_prefix}/global/fires", tags=["Global Live Data"])
+@app.get("/api/global/fires", tags=["Global Live Data"])
+async def get_global_fires(request: Request, limit: int = 100):
+    """Returns active wildfire hotspots and clustered zones from NASA FIRMS."""
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    service = get_external_data_service()
+    zones = service.get_hazard_zones(hazard_type="WILDFIRE")
+    points = service.nasa_firms.fetch_active_fires(force_refresh=False, max_points=limit)
+    return {
+        "success": True,
+        "zones": [z.model_dump() for z in zones],
+        "points": points[:limit],
+        "total_hotspots": len(points),
+        "request_id": request_id,
+    }
+
+
+@app.get(f"{settings.api_prefix}/global/earthquakes", tags=["Global Live Data"])
+@app.get("/api/global/earthquakes", tags=["Global Live Data"])
+async def get_global_earthquakes(request: Request, min_magnitude: float = 2.5):
+    """Returns recent seismic events from USGS with calibrated impact radius."""
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    service = get_external_data_service()
+    events = service.get_disaster_events(event_type="EARTHQUAKE")
+    zones = service.get_hazard_zones(hazard_type="EARTHQUAKE")
+    return {
+        "success": True,
+        "events": [e.model_dump() for e in events],
+        "zones": [z.model_dump() for z in zones],
+        "count": len(events),
+        "request_id": request_id,
+    }
+
+
+@app.get(f"{settings.api_prefix}/global/disasters", tags=["Global Live Data"])
+@app.get("/api/global/disasters", tags=["Global Live Data"])
+async def get_global_disasters(request: Request):
+    """Returns live global multi-hazard disaster alerts from GDACS & USGS."""
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    service = get_external_data_service()
+    events = service.get_disaster_events()
+    return {
+        "success": True,
+        "disasters": [e.model_dump() for e in events],
+        "count": len(events),
+        "request_id": request_id,
+    }
+
+
+@app.get(f"{settings.api_prefix}/global/floods", tags=["Global Live Data"])
+@app.get("/api/global/floods", tags=["Global Live Data"])
+async def get_global_floods(request: Request):
+    """Returns global flood risk zones and GloFAS status."""
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    service = get_external_data_service()
+    zones = service.get_hazard_zones(hazard_type="FLOOD")
+    glofas_status = service.glofas.get_status()
+    return {
+        "success": True,
+        "zones": [z.model_dump() for z in zones],
+        "count": len(zones),
+        "glofas_status": glofas_status.model_dump(),
+        "request_id": request_id,
+    }
+
+
+@app.get(f"{settings.api_prefix}/global/drought", tags=["Global Live Data"])
+@app.get("/api/global/drought", tags=["Global Live Data"])
+async def get_global_drought(request: Request):
+    """Returns global drought conditions from GDACS and meteorological evaluations."""
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    service = get_external_data_service()
+    zones = service.get_hazard_zones(hazard_type="DROUGHT")
+    return {
+        "success": True,
+        "zones": [z.model_dump() for z in zones],
+        "count": len(zones),
+        "request_id": request_id,
+    }
+
+
+@app.get(f"{settings.api_prefix}/global/hazards", tags=["Global Live Data"])
+@app.get("/api/global/hazards", tags=["Global Live Data"])
+async def get_all_global_hazards(request: Request, hazard_type: Optional[str] = None):
+    """Returns all fused global hazard zones (HEAT, FLOOD, WILDFIRE, EARTHQUAKE, DROUGHT, CYCLONE, COMPOUND)."""
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    service = get_external_data_service()
+    zones = service.get_hazard_zones(hazard_type=hazard_type)
+    return {
+        "success": True,
+        "hazards": [z.model_dump() for z in zones],
+        "count": len(zones),
+        "request_id": request_id,
+    }
+
+
+@app.get(f"{settings.api_prefix}/global/events", tags=["Global Live Data"])
+@app.get("/api/global/events", tags=["Global Live Data"])
+async def get_all_global_events(request: Request, limit: int = 100):
+    """Returns real-time event stream from all active global disaster feeds."""
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    service = get_external_data_service()
+    events = service.get_disaster_events()
+    return {
+        "success": True,
+        "events": [e.model_dump() for e in events[:limit]],
+        "count": len(events[:limit]),
+        "request_id": request_id,
+    }
+
+
+@app.get(f"{settings.api_prefix}/global/sources", tags=["Global Live Data"])
+@app.get("/api/global/sources", tags=["Global Live Data"])
+async def get_global_sources_status(request: Request):
+    """
+    Returns verified status of all global feeds, decoupled from physical ESP32 mesh.
+    """
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    service = get_external_data_service()
+    summary = service.get_sources_status()
+    return {
+        "success": True,
+        "summary": summary,
+        "request_id": request_id,
+    }
+
+
+@app.get(f"{settings.api_prefix}/global/ai-summary", tags=["Global Live Data"])
+@app.get("/api/global/ai-summary", tags=["Global Live Data"])
+async def get_global_ai_summary(request: Request):
+    """
+    Returns structured deterministic facts for the AI Command Center panel.
+    Strictly grounded — zero invented numbers.
+    """
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    service = get_external_data_service()
+    ai_data = service.get_ai_summary()
+    return {
+        "success": True,
+        "ai_summary": ai_data,
+        "request_id": request_id,
+    }
+
+
+@app.post(f"{settings.api_prefix}/global/sync", tags=["Global Live Data"])
+@app.post("/api/global/sync", tags=["Global Live Data"])
+async def trigger_global_sync(request: Request):
+    """Triggers on-demand synchronization of all external global feeds."""
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    service = get_external_data_service()
+    sync_result = await asyncio.to_thread(service.sync_all_feeds, True)
+    return {
+        "success": True,
+        "result": sync_result,
+        "request_id": request_id,
+    }
 
 
 if __name__ == "__main__":

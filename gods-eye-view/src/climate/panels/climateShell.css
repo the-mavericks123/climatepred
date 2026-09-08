@@ -1,0 +1,1587 @@
+/**
+ * Climatic Eye — Command Center Shell Stylesheet
+ *
+ * Minimalist, calm, professional, and scientific environmental geospatial
+ * command center overlay. Built with restrained dark charcoal surfaces,
+ * a single cool sea-green accent, and quiet typographic hierarchy.
+ */
+
+:root {
+  /* Surface colors: near-black charcoal, very dark blue-gray, soft graphite */
+  --ce-bg-overlay: rgba(10, 13, 18, 0.88);
+  --ce-bg-surface: rgba(15, 20, 27, 0.82);
+  --ce-bg-surface-elevated: rgba(20, 27, 36, 0.85);
+  --ce-bg-surface-hover: rgba(26, 35, 47, 0.85);
+  --ce-bg-card: rgba(12, 16, 23, 0.65);
+  --ce-bg-card-hover: rgba(18, 24, 34, 0.8);
+  --ce-bg-pill: rgba(20, 26, 36, 0.5);
+
+  /* Low-contrast separation & borders */
+  --ce-border: rgba(255, 255, 255, 0.08);
+  --ce-border-subtle: rgba(255, 255, 255, 0.045);
+  --ce-border-accent: rgba(45, 212, 191, 0.25);
+  --ce-border-glow: transparent;
+  --ce-border-cyan: rgba(45, 212, 191, 0.2);
+
+  /* Restrained palette: single cool teal/sea-green accent */
+  --ce-teal: #2dd4bf;
+  --ce-teal-muted: #14b8a6;
+  --ce-emerald: #2dd4bf; /* Alias for component compatibility */
+  --ce-cyan: #38bdf8;    /* Muted cool blue-gray / soft sky */
+  --ce-amber: #d97706;   /* Muted amber for stale/warning */
+  --ce-rose: #e11d48;    /* Muted rose for emergency */
+  --ce-slate: #64748b;   /* Muted slate for unavailable */
+
+  /* Text colors: soft off-white, muted cool gray, subdued gray */
+  --ce-text-primary: #f1f5f9;
+  --ce-text-secondary: #94a3b8;
+  --ce-text-muted: #64748b;
+  --ce-text-emerald: #2dd4bf;
+  --ce-text-cyan: #7dd3fc;
+  --ce-text-amber: #fbbf24;
+
+  /* Typography: Clean modern sans for interface, mono for numeric telemetry */
+  --ce-font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ce-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  --ce-radius-sm: 3px;
+  --ce-radius-md: 5px;
+  --ce-radius-lg: 8px;
+
+  /* Subtle depth without neon glow */
+  --ce-shadow-glow: none;
+  --ce-shadow-card: 0 4px 20px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Legacy GEV Visual Remnants Suppression ─────────────────────── */
+#first-run-launcher,
+#style-indicator,
+#left-panel-stack,
+#right-context-rail,
+#command-dock,
+#key-setup-chip,
+#top-center-actions,
+#title-bar {
+  display: none !important;
+}
+
+/* ── Root Shell Overlay Container ─────────────────────────────── */
+#climate-eye-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-family: var(--ce-font-sans);
+  color: var(--ce-text-primary);
+  user-select: none;
+  box-sizing: border-box;
+}
+
+#climate-eye-root * {
+  box-sizing: border-box;
+}
+
+/* ── Top Navigation Bar ────────────────────────────────────────── */
+#climate-top-nav {
+  pointer-events: auto;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: var(--ce-bg-overlay);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--ce-border);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  z-index: 70;
+}
+
+.ce-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ce-brand-radar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ce-brand-radar::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ce-brand-radar::after {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ce-teal);
+}
+
+.ce-brand-title {
+  font-family: var(--ce-font-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--ce-text-primary);
+  text-transform: uppercase;
+}
+
+.ce-brand-badge {
+  font-family: var(--ce-font-sans);
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--ce-text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--ce-border-subtle);
+  padding: 2px 6px;
+  border-radius: var(--ce-radius-sm);
+  text-transform: uppercase;
+}
+
+/* Nav Modes Segment */
+.ce-nav-modes {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 2px;
+  border-radius: var(--ce-radius-md);
+  border: 1px solid var(--ce-border-subtle);
+}
+
+.ce-mode-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ce-text-secondary);
+  font-family: var(--ce-font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  padding: 5px 12px;
+  border-radius: var(--ce-radius-sm);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.ce-mode-btn:hover {
+  color: var(--ce-text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ce-mode-btn.active {
+  color: #ffffff;
+  background: rgba(45, 212, 191, 0.12);
+  border-color: rgba(45, 212, 191, 0.35);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.ce-mode-btn[data-mode="EMERGENCY"].active {
+  background: rgba(225, 29, 72, 0.15);
+  border-color: rgba(225, 29, 72, 0.35);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+/* Top Nav Quick Indicators */
+.ce-top-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ce-quick-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--ce-text-secondary);
+}
+
+.ce-quick-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ce-amber);
+}
+
+.ce-quick-dot.online {
+  background: var(--ce-teal);
+  box-shadow: none;
+}
+
+/* ── Panels Base Layout ────────────────────────────────────────── */
+.ce-panel {
+  pointer-events: auto;
+  position: fixed;
+  background: var(--ce-bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--ce-border);
+  box-shadow: var(--ce-shadow-card);
+  border-radius: var(--ce-radius-lg);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  z-index: 65;
+}
+
+.ce-panel::-webkit-scrollbar {
+  width: 4px;
+}
+.ce-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+/* ── Left Climate Panel ────────────────────────────────────────── */
+#climate-left-panel {
+  top: 58px;
+  left: 14px;
+  bottom: 40px;
+  width: 260px;
+}
+
+/* ── Right Intelligence Panel ──────────────────────────────────── */
+#climate-right-panel {
+  top: 58px;
+  right: 14px;
+  bottom: 40px;
+  width: 270px;
+}
+
+/* ── Sensor Mesh Panel ─────────────────────────────────────────── */
+#climate-sensor-mesh-panel {
+  top: 58px;
+  left: 282px;
+  bottom: 40px;
+  width: 275px;
+  z-index: 66;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#climate-sensor-mesh-panel.ce-mesh-mode-active {
+  border-color: var(--ce-border-accent);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55);
+}
+
+/* ── Panel Cards & Sections ────────────────────────────────────── */
+.ce-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--ce-border-subtle);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.ce-section-title {
+  font-family: var(--ce-font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ce-text-primary);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ce-section-badge {
+  font-family: var(--ce-font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--ce-text-muted);
+  letter-spacing: 0.04em;
+}
+
+.ce-mesh-link-btn {
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--ce-border);
+  color: var(--ce-text-secondary);
+  border-radius: var(--ce-radius-sm);
+  padding: 1px 6px;
+  transition: all 0.15s ease;
+}
+
+.ce-mesh-link-btn:hover {
+  color: var(--ce-text-primary);
+  border-color: var(--ce-border-accent);
+}
+
+.ce-card {
+  background: var(--ce-bg-card);
+  border: 1px solid var(--ce-border-subtle);
+  border-radius: var(--ce-radius-md);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ce-card:hover {
+  background: var(--ce-bg-card-hover);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Climate Layers Toggle List */
+.ce-layer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 7px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--ce-radius-sm);
+  border: 1px solid transparent;
+  font-size: 11.5px;
+  color: var(--ce-text-secondary);
+  transition: all 0.15s ease;
+}
+
+.ce-layer-item:hover {
+  border-color: var(--ce-border-subtle);
+  color: var(--ce-text-primary);
+}
+
+.ce-layer-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ce-layer-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ce-text-muted);
+  transition: background 0.15s ease;
+}
+
+.ce-layer-dot.active {
+  background: var(--ce-teal);
+  box-shadow: none;
+}
+
+.ce-layer-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--ce-border-subtle);
+  color: var(--ce-text-muted);
+  font-size: 9px;
+  font-family: var(--ce-font-mono);
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: var(--ce-radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ce-layer-toggle-btn.active {
+  border-color: rgba(45, 212, 191, 0.35);
+  color: var(--ce-teal);
+  background: rgba(45, 212, 191, 0.08);
+  font-weight: 600;
+}
+
+/* Climate Layers Legend */
+.ce-layer-legend-panel {
+  margin-top: 6px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ce-border-subtle);
+  border-radius: var(--ce-radius-sm);
+  font-size: 10px;
+}
+
+.ce-legend-header {
+  font-size: 8.5px;
+  font-weight: 600;
+  color: var(--ce-text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.ce-legend-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+  color: var(--ce-text-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  font-size: 9.5px;
+}
+
+.ce-legend-item:last-child {
+  border-bottom: none;
+}
+
+.ce-legend-unit {
+  font-family: var(--ce-font-mono);
+  color: var(--ce-teal);
+  font-weight: 500;
+}
+
+.ce-legend-notice {
+  margin-top: 6px;
+  font-size: 8.5px;
+  color: var(--ce-text-muted);
+  font-style: italic;
+  line-height: 1.3;
+}
+
+/* Metric Channels */
+.ce-metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.ce-metric-card {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ce-border-subtle);
+  border-radius: var(--ce-radius-sm);
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ce-metric-label {
+  font-family: var(--ce-font-sans);
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--ce-text-muted);
+  letter-spacing: 0.04em;
+}
+
+.ce-metric-value-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.ce-metric-value {
+  font-family: var(--ce-font-mono);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ce-text-primary);
+}
+
+.ce-unavailable-badge {
+  display: inline-block;
+  font-family: var(--ce-font-mono);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: rgba(100, 116, 139, 0.12);
+  color: var(--ce-text-muted);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+}
+
+.ce-channel-footnote {
+  font-size: 8.5px;
+  color: var(--ce-text-muted);
+  font-style: italic;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+/* Intelligence Panel Placeholders */
+.ce-intel-placeholder-box {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--ce-border);
+  border-radius: var(--ce-radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ce-intel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ce-intel-icon {
+  font-size: 13px;
+  color: var(--ce-teal);
+  opacity: 0.9;
+}
+
+.ce-intel-headline {
+  font-family: var(--ce-font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ce-text-primary);
+}
+
+.ce-intel-desc {
+  font-family: var(--ce-font-sans);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ce-text-secondary);
+  margin: 0;
+}
+
+.ce-intel-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--ce-font-mono);
+  font-size: 8.5px;
+  color: var(--ce-text-muted);
+  border-top: 1px solid var(--ce-border-subtle);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+/* ── Bottom Status Bar ─────────────────────────────────────────── */
+#climate-bottom-bar {
+  pointer-events: auto;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: var(--ce-bg-overlay);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--ce-border);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 70;
+  font-size: 10.5px;
+}
+
+.ce-status-cluster {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ce-status-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ce-text-muted);
+  font-size: 10.5px;
+}
+
+.ce-status-item strong {
+  color: var(--ce-text-primary);
+  font-family: var(--ce-font-mono);
+}
+
+.ce-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: var(--ce-radius-sm);
+  font-family: var(--ce-font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.ce-status-pill.unavailable,
+.ce-status-pill.disconnected,
+.ce-status-pill.standby {
+  background: rgba(100, 116, 139, 0.1);
+  color: var(--ce-text-muted);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.ce-status-pill.stale,
+.ce-status-pill.degraded {
+  background: rgba(217, 119, 6, 0.1);
+  color: var(--ce-amber);
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+
+.ce-status-pill.simulated {
+  background: rgba(168, 85, 247, 0.1);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.ce-status-pill.live,
+.ce-status-pill.healthy,
+.ce-status-pill.ready {
+  background: rgba(45, 212, 191, 0.1);
+  color: var(--ce-teal);
+  border: 1px solid rgba(45, 212, 191, 0.25);
+}
+
+.ce-pill-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Clock */
+.ce-clock {
+  font-family: var(--ce-font-mono);
+  font-size: 10.5px;
+  color: var(--ce-text-muted);
+  letter-spacing: 0.04em;
+}
+
+/* Status Bar Sub-counts & Telemetry TS */
+.ce-sub-counts {
+  font-family: var(--ce-font-mono);
+  font-size: 9.5px;
+  color: var(--ce-text-muted);
+  margin-left: 2px;
+}
+
+.ce-sub-counts .live {
+  color: var(--ce-teal);
+}
+
+.ce-sub-counts .stale {
+  color: var(--ce-amber);
+}
+
+.ce-sub-counts .unavailable {
+  color: var(--ce-slate);
+}
+
+.ce-status-telemetry-ts {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ce-status-val {
+  color: var(--ce-text-secondary);
+  font-size: 9.5px;
+}
+
+/* ── Operational Subsystems Status Grid ────────────────────────── */
+.ce-subsystems-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.ce-subsystem-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--ce-border-subtle);
+  border-radius: var(--ce-radius-sm);
+  padding: 4px 7px;
+}
+
+.ce-subsystem-label {
+  font-family: var(--ce-font-sans);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ce-text-muted);
+}
+
+/* ── Keyboard Accessibility Focus States ───────────────────────── */
+button:focus-visible,
+[role="tab"]:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 1.5px solid var(--ce-teal) !important;
+  outline-offset: 1px !important;
+  box-shadow: none !important;
+}
+
+/* ── Selected Node Detail View (Calm Technical Card) ─────────────── */
+.hidden {
+  display: none !important;
+}
+
+.ce-deselect-btn {
+  background: transparent;
+  border: 1px solid var(--ce-border-subtle);
+  color: var(--ce-text-muted);
+  border-radius: var(--ce-radius-sm);
+  padding: 2px 6px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ce-deselect-btn:hover {
+  background: rgba(225, 29, 72, 0.12);
+  color: var(--ce-rose);
+  border-color: rgba(225, 29, 72, 0.3);
+}
+
+.ce-node-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.ce-detail-item {
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 5px 7px;
+  border-radius: var(--ce-radius-sm);
+  border: 1px solid var(--ce-border-subtle);
+}
+
+.ce-detail-label {
+  font-family: var(--ce-font-sans);
+  font-size: 8px;
+  font-weight: 500;
+  color: var(--ce-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.ce-detail-val {
+  font-family: var(--ce-font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--ce-text-primary);
+}
+
+.ce-detail-val.highlight {
+  color: var(--ce-teal);
+  font-weight: 600;
+}
+
+.ce-detail-val.mono {
+  font-size: 9px;
+  word-break: break-all;
+}
+
+/* ── 21st.dev Tactical Sensor Telemetry Card (Refined & Restrained) ── */
+.ce-tactical-telemetry-card {
+  position: relative;
+  border: 1px solid var(--ce-border) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+  background: rgba(14, 19, 27, 0.88) !important;
+}
+
+/* 4 Subtle HUD corner indicators (refined, non-glowing technical markers) */
+.ce-hud-corner {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-color: rgba(148, 163, 184, 0.3);
+  pointer-events: none;
+}
+.ce-hud-corner.tl { top: -1px; left: -1px; border-top: 1px solid rgba(148, 163, 184, 0.3); border-left: 1px solid rgba(148, 163, 184, 0.3); }
+.ce-hud-corner.tr { top: -1px; right: -1px; border-top: 1px solid rgba(148, 163, 184, 0.3); border-right: 1px solid rgba(148, 163, 184, 0.3); }
+.ce-hud-corner.bl { bottom: -1px; left: -1px; border-bottom: 1px solid rgba(148, 163, 184, 0.3); border-left: 1px solid rgba(148, 163, 184, 0.3); }
+.ce-hud-corner.br { bottom: -1px; right: -1px; border-bottom: 1px solid rgba(148, 163, 184, 0.3); border-right: 1px solid rgba(148, 163, 184, 0.3); }
+
+/* Tactical header */
+.ce-tactical-header-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ce-telemetry-beacon {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ce-teal);
+  box-shadow: none;
+}
+
+.ce-tactical-chip {
+  font-family: var(--ce-font-mono);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: var(--ce-radius-sm);
+  background: rgba(45, 212, 191, 0.08);
+  color: var(--ce-teal);
+  border: 1px solid rgba(45, 212, 191, 0.2);
+  text-transform: uppercase;
+}
+
+/* Tactical ID Bar */
+.ce-tactical-id-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ce-border-subtle);
+  border-radius: var(--ce-radius-sm);
+  padding: 6px 8px;
+  margin-bottom: 6px;
+}
+
+.ce-tactical-id-item {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tactical Tile */
+.ce-tactical-tile {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--ce-border-subtle);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ce-tactical-tile:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ce-tactical-tile.full-width {
+  grid-column: span 2;
+}
+
+.ce-tile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.ce-tile-indicator {
+  font-family: var(--ce-font-mono);
+  font-size: 8px;
+  font-weight: 500;
+  color: var(--ce-text-muted);
+}
+
+/* Tactical Card Footer */
+.ce-tactical-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid var(--ce-border-subtle);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+}
+
+.ce-tactical-footer-label {
+  color: var(--ce-text-muted);
+}
+
+.ce-tactical-footer-status {
+  color: var(--ce-teal);
+  font-weight: 600;
+}
+
+/* ── Sensor Mesh Component Styles ───────────────────────────────── */
+.ce-mesh-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ce-mesh-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ce-mesh-deselect-btn {
+  background: rgba(225, 29, 72, 0.1);
+  border: 1px solid rgba(225, 29, 72, 0.25);
+  color: var(--ce-rose);
+  font-family: var(--ce-font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: var(--ce-radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ce-mesh-deselect-btn:hover {
+  background: rgba(225, 29, 72, 0.2);
+  border-color: var(--ce-rose);
+}
+
+.ce-mesh-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 6px 4px;
+  border-radius: var(--ce-radius-sm);
+  border: 1px solid var(--ce-border-subtle);
+  text-align: center;
+}
+
+.ce-mesh-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ce-mesh-stat-val {
+  font-family: var(--ce-font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ce-text-primary);
+}
+
+.ce-mesh-stat-lbl {
+  font-family: var(--ce-font-sans);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ce-text-muted);
+}
+
+.ce-mesh-telemetry-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9.5px;
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--ce-radius-sm);
+  margin-top: 4px;
+}
+
+.ce-mesh-latest-lbl {
+  color: var(--ce-text-muted);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.ce-mesh-latest-val {
+  font-family: var(--ce-font-mono);
+  color: var(--ce-teal);
+  font-weight: 500;
+}
+
+.ce-mesh-node-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 480px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding-right: 2px;
+}
+
+.ce-mesh-node-row {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--ce-border-subtle);
+  border-radius: var(--ce-radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ce-mesh-node-row:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ce-mesh-node-row:focus-visible {
+  outline: 1.5px solid var(--ce-teal);
+  outline-offset: 1px;
+}
+
+.ce-mesh-node-row.selected {
+  border-color: rgba(45, 212, 191, 0.4);
+  background: rgba(45, 212, 191, 0.06);
+  box-shadow: none;
+}
+
+.ce-mesh-node-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ce-mesh-node-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ce-mesh-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ce-mesh-id {
+  font-family: var(--ce-font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ce-text-primary);
+  letter-spacing: 0.02em;
+}
+
+.ce-mesh-badge {
+  font-size: 8px;
+  font-family: var(--ce-font-mono);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+
+.ce-mesh-badge.available {
+  color: var(--ce-teal);
+  background: rgba(45, 212, 191, 0.1);
+  border: 1px solid rgba(45, 212, 191, 0.25);
+}
+
+.ce-mesh-badge.stale {
+  color: var(--ce-amber);
+  background: rgba(217, 119, 6, 0.1);
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+
+.ce-mesh-badge.unavailable {
+  color: var(--ce-text-muted);
+  background: rgba(100, 116, 139, 0.1);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.ce-mesh-node-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.ce-mesh-metric-item {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 2px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--ce-border-subtle);
+}
+
+.ce-mesh-metric-lbl {
+  font-family: var(--ce-font-sans);
+  font-size: 8px;
+  font-weight: 500;
+  color: var(--ce-text-muted);
+}
+
+.ce-mesh-metric-val {
+  font-family: var(--ce-font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--ce-text-primary);
+}
+
+.ce-mesh-node-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 8px;
+  color: var(--ce-text-muted);
+  border-top: 1px solid var(--ce-border-subtle);
+  padding-top: 4px;
+  margin-top: 2px;
+}
+
+.ce-mesh-ts-exact {
+  font-family: var(--ce-font-mono);
+  color: var(--ce-text-muted);
+}
+
+.ce-mesh-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--ce-text-muted);
+  gap: 6px;
+}
+
+.ce-mesh-empty-icon {
+  font-size: 20px;
+  opacity: 0.5;
+}
+
+.ce-mesh-empty-text {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ce-text-secondary);
+  margin: 0;
+}
+
+.ce-mesh-empty-sub {
+  font-size: 9px;
+  color: var(--ce-text-muted);
+}
+
+/* ── Responsive Adaptations ────────────────────────────────────── */
+@media (max-width: 1400px) {
+  #climate-sensor-mesh-panel {
+    left: auto;
+    right: 292px;
+    width: 260px;
+  }
+}
+
+@media (max-width: 1280px) {
+  #climate-left-panel {
+    width: 240px;
+    left: 12px;
+  }
+  #climate-right-panel {
+    width: 250px;
+    right: 12px;
+  }
+  #climate-sensor-mesh-panel {
+    right: 270px;
+    width: 250px;
+  }
+  .ce-mode-btn {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 1100px) {
+  #climate-sensor-mesh-panel {
+    left: 16px;
+    right: auto;
+    width: 320px;
+    display: none;
+  }
+  #climate-sensor-mesh-panel.ce-mesh-mode-active {
+    display: flex;
+    z-index: 70;
+  }
+}
+
+@media (max-width: 1024px) {
+  #climate-left-panel,
+  #climate-right-panel,
+  #climate-sensor-mesh-panel {
+    max-height: 45vh;
+  }
+  #climate-right-panel {
+    top: auto;
+    bottom: 36px;
+  }
+  .ce-brand-badge {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  #climate-top-nav {
+    overflow-x: auto;
+    padding: 0 10px;
+  }
+  .ce-nav-modes {
+    overflow-x: auto;
+  }
+  #climate-left-panel {
+    width: calc(100vw - 24px);
+    left: 12px;
+    right: 12px;
+    bottom: auto;
+    max-height: 40vh;
+  }
+  #climate-right-panel {
+    display: none;
+  }
+  #climate-sensor-mesh-panel {
+    width: calc(100vw - 24px);
+    left: 12px;
+    right: 12px;
+  }
+}
+
+/* ── Cesium Attribution & Credits (Harmonized with Climate Eye) ── */
+#cesium-credits {
+  position: fixed !important;
+  bottom: 0 !important;
+  right: 110px !important;
+  left: auto !important;
+  width: auto !important;
+  min-width: fit-content !important;
+  max-width: none !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  z-index: 70 !important;
+  background: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: auto !important;
+  white-space: nowrap !important;
+}
+
+#cesium-credits .cesium-widget-credits {
+  position: static !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  font-family: var(--ce-font-mono) !important;
+  font-size: 9px !important;
+  color: var(--ce-text-muted) !important;
+  letter-spacing: 0.04em !important;
+}
+
+#cesium-credits .cesium-credit-logoContainer {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 32px !important;
+}
+
+#cesium-credits .cesium-credit-logoContainer img {
+  height: 11px !important;
+  width: auto !important;
+  vertical-align: middle !important;
+  opacity: 0.5 !important;
+  filter: grayscale(1) brightness(1.3) !important;
+  transition: opacity 0.15s ease, filter 0.15s ease !important;
+}
+
+#cesium-credits .cesium-credit-logoContainer:hover img {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+#cesium-credits .cesium-credit-textContainer,
+#cesium-credits .cesium-credit-textContainer a,
+#cesium-credits .cesium-credit-expand-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  font-family: var(--ce-font-mono) !important;
+  font-size: 8.5px !important;
+  color: var(--ce-text-muted) !important;
+  text-decoration: none !important;
+  letter-spacing: 0.03em !important;
+  opacity: 0.65 !important;
+  transition: color 0.15s ease, opacity 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+#cesium-credits .cesium-credit-textContainer a:hover,
+#cesium-credits .cesium-credit-expand-link:hover {
+  color: var(--ce-text-primary) !important;
+  opacity: 1 !important;
+  text-decoration: underline !important;
+}
+
+#cesium-credits .cesium-credit-textContainer::before {
+  content: "•";
+  margin-right: 8px;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+#cesium-credits .cesium-credit-expand-link::before {
+  content: "•";
+  margin-right: 8px;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.cesium-credit-lightbox {
+  background: var(--ce-bg-panel) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--ce-border) !important;
+  border-radius: var(--ce-radius-lg) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7) !important;
+  color: var(--ce-text-primary) !important;
+}
+
+.cesium-credit-lightbox-title {
+  font-family: var(--ce-font-sans) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--ce-text-primary) !important;
+  letter-spacing: 0.04em !important;
+}
+
+.cesium-credit-lightbox-close {
+  color: var(--ce-text-muted) !important;
+  transition: color 0.15s ease !important;
+}
+
+.cesium-credit-lightbox-close:hover {
+  color: var(--ce-text-primary) !important;
+}
+
+@media (max-width: 1024px) {
+  #cesium-credits {
+    right: 80px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  #cesium-credits {
+    right: 12px !important;
+    bottom: 34px !important;
+    background: var(--ce-bg-overlay) !important;
+    padding: 0 6px !important;
+    border-radius: var(--ce-radius-sm) !important;
+    border: 1px solid var(--ce-border) !important;
+    height: 22px !important;
+    line-height: 22px !important;
+  }
+}
+
+/* ── Tactical Hazard Intelligence HUD Popover ── */
+.ce-tactical-hazard-popover {
+  z-index: 1000;
+  pointer-events: auto;
+  width: 320px;
+  background: rgba(10, 16, 26, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 212, 255, 0.2);
+  border-radius: var(--ce-radius-md, 6px);
+  padding: 12px;
+  color: var(--ce-text-primary, #e2e8f0);
+  font-family: var(--ce-font-base, system-ui, sans-serif);
+  animation: cePopoverFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ce-tactical-hazard-popover.ce-hidden {
+  display: none !important;
+}
+
+@keyframes cePopoverFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.ce-popover-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ce-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 6px;
+}
+
+.ce-popover-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ce-popover-badge {
+  font-family: var(--ce-font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ce-popover-badge.danger {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.6);
+}
+
+.ce-popover-badge.warning {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fde68a;
+  border: 1px solid rgba(245, 158, 11, 0.6);
+}
+
+.ce-popover-badge.info {
+  background: rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.6);
+}
+
+.ce-popover-type {
+  font-family: var(--ce-font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  color: #00d4ff;
+  letter-spacing: 0.06em;
+}
+
+.ce-popover-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--ce-text-muted, #94a3b8);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+  transition: color 0.15s ease;
+}
+
+.ce-popover-close-btn:hover {
+  color: #ffffff;
+}
+
+.ce-popover-subhead {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f8fafc;
+  line-height: 1.3;
+}
+
+.ce-popover-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.ce-pop-metric {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.ce-pop-metric .label {
+  font-family: var(--ce-font-mono, monospace);
+  font-size: 10px;
+  color: var(--ce-text-muted, #94a3b8);
+  width: 60px;
+}
+
+.ce-pop-metric .bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ce-pop-metric .bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.ce-pop-metric .bar-fill.danger { background: #ef4444; }
+.ce-pop-metric .bar-fill.warning { background: #f59e0b; }
+.ce-pop-metric .bar-fill.info { background: #3b82f6; }
+
+.ce-pop-metric .val {
+  font-size: 11px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.ce-pop-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10.5px;
+}
+
+.ce-pop-row .label {
+  font-family: var(--ce-font-mono, monospace);
+  color: var(--ce-text-muted, #94a3b8);
+  font-size: 9.5px;
+  letter-spacing: 0.03em;
+}
+
+.ce-pop-row .val {
+  color: #e2e8f0;
+}
+
+.ce-pop-row .epistemic-tag {
+  color: #00f5a0;
+  font-weight: 700;
+}
+
+.ce-popover-directive {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ce-popover-directive .label {
+  font-family: var(--ce-font-mono, monospace);
+  font-size: 9.5px;
+  color: #00d4ff;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ce-popover-directive .directive-text {
+  font-size: 11px;
+  color: #cbd5e1;
+  line-height: 1.35;
+  margin: 0;
+}
+
+

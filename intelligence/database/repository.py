@@ -215,6 +215,69 @@ class IntelligenceRepository:
             );
             """)
 
+            # 10. Global External Observations
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS external_observations (
+                observation_id TEXT PRIMARY KEY,
+                source TEXT NOT NULL,
+                station_id TEXT NOT NULL,
+                latitude REAL NOT NULL,
+                longitude REAL NOT NULL,
+                measurements_json TEXT NOT NULL,
+                quality_score REAL NOT NULL,
+                timestamp TEXT NOT NULL,
+                received_at TEXT NOT NULL
+            );
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_ext_obs_ts ON external_observations(timestamp);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_ext_obs_src ON external_observations(source);")
+
+            # 11. Global Hazard Zones
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS global_hazards (
+                zone_id TEXT PRIMARY KEY,
+                hazard_type TEXT NOT NULL,
+                severity REAL NOT NULL,
+                confidence REAL NOT NULL,
+                geometry_json TEXT NOT NULL,
+                center_lat REAL NOT NULL,
+                center_lon REAL NOT NULL,
+                radius_km REAL NOT NULL,
+                drivers_json TEXT NOT NULL,
+                timestamp TEXT NOT NULL
+            );
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_gl_hz_type ON global_hazards(hazard_type);")
+
+            # 12. External Disaster Events
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS external_events (
+                event_id TEXT PRIMARY KEY,
+                event_type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                severity REAL NOT NULL,
+                alert_level TEXT NOT NULL,
+                latitude REAL NOT NULL,
+                longitude REAL NOT NULL,
+                source TEXT NOT NULL,
+                timestamp TEXT NOT NULL
+            );
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_ext_ev_ts ON external_events(timestamp);")
+
+            # 13. Data Sources Status
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS data_sources (
+                source_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                status TEXT NOT NULL,
+                last_update TEXT,
+                record_count INTEGER DEFAULT 0,
+                error_message TEXT,
+                updated_at TEXT NOT NULL
+            );
+            """)
+
             conn.commit()
             if self.db_path != ":memory:":
                 conn.close()
@@ -262,6 +325,28 @@ class IntelligenceRepository:
             if self.db_path != ":memory:":
                 conn.close()
             return res
+
+    def list_nodes(self) -> List[Dict[str, Any]]:
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM nodes ORDER BY node_id ASC")
+            rows = cursor.fetchall()
+            results = [dict(r) for r in rows]
+            if self.db_path != ":memory:":
+                conn.close()
+            return results
+
+    def get_latest_readings(self, limit: int = 50) -> List[Dict[str, Any]]:
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM sensor_readings ORDER BY timestamp DESC LIMIT ?", (limit,))
+            rows = cursor.fetchall()
+            results = [dict(r) for r in rows]
+            if self.db_path != ":memory:":
+                conn.close()
+            return results
 
     # -------------------------------------------------------------------------
     # 2. Telemetry Operations
@@ -407,6 +492,7 @@ class IntelligenceRepository:
         self,
         node_id: Optional[str] = None,
         hazard_type: Optional[str] = None,
+        limit: int = 50,
     ) -> List[Dict[str, Any]]:
         with self._lock:
             conn = self._get_connection()
@@ -419,7 +505,8 @@ class IntelligenceRepository:
             if hazard_type:
                 query += " AND hazard_type = ?"
                 params.append(hazard_type)
-            query += " ORDER BY detected_at DESC"
+            query += " ORDER BY detected_at DESC LIMIT ?"
+            params.append(limit)
             cursor.execute(query, tuple(params))
             rows = cursor.fetchall()
             results = [dict(r) for r in rows]
@@ -471,7 +558,7 @@ class IntelligenceRepository:
             if self.db_path != ":memory:":
                 conn.close()
 
-    def get_predictions(self, node_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_predictions(self, node_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
         with self._lock:
             conn = self._get_connection()
             cursor = conn.cursor()
@@ -480,7 +567,8 @@ class IntelligenceRepository:
             if node_id:
                 query += " AND node_id = ?"
                 params.append(node_id)
-            query += " ORDER BY predicted_at DESC"
+            query += " ORDER BY predicted_at DESC LIMIT ?"
+            params.append(limit)
             cursor.execute(query, tuple(params))
             rows = cursor.fetchall()
             results = [dict(r) for r in rows]
@@ -758,6 +846,163 @@ class IntelligenceRepository:
             conn = self._get_connection()
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM response_plans ORDER BY evaluated_at DESC LIMIT ?", (limit,))
+            rows = cursor.fetchall()
+            results = [dict(r) for r in rows]
+            if self.db_path != ":memory:":
+                conn.close()
+            return results
+
+    # -------------------------------------------------------------------------
+    # 10. Global External Data Operations
+    # -------------------------------------------------------------------------
+    def save_external_observation(
+        self,
+        obs_id: str,
+        source: str,
+        station_id: str,
+        lat: float,
+        lon: float,
+        measurements: Dict[str, Any],
+        quality_score: float,
+        timestamp: str,
+        received_at: str,
+    ) -> None:
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT INTO external_observations (
+                observation_id, source, station_id, latitude, longitude,
+                measurements_json, quality_score, timestamp, received_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(observation_id) DO UPDATE SET
+                measurements_json=excluded.measurements_json,
+                quality_score=excluded.quality_score,
+                received_at=excluded.received_at;
+            """, (obs_id, source, station_id, lat, lon, json.dumps(measurements), quality_score, timestamp, received_at))
+            conn.commit()
+            if self.db_path != ":memory:":
+                conn.close()
+
+    def get_external_observations(self, limit: int = 50, source: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            if source:
+                cursor.execute("SELECT * FROM external_observations WHERE source = ? ORDER BY timestamp DESC LIMIT ?", (source, limit))
+            else:
+                cursor.execute("SELECT * FROM external_observations ORDER BY timestamp DESC LIMIT ?", (limit,))
+            rows = cursor.fetchall()
+            results = []
+            for r in rows:
+                d = dict(r)
+                if "measurements_json" in d:
+                    try:
+                        d["measurements"] = json.loads(d["measurements_json"])
+                    except Exception:
+                        d["measurements"] = {}
+                results.append(d)
+            if self.db_path != ":memory:":
+                conn.close()
+            return results
+
+    def save_global_hazard(
+        self,
+        zone_id: str,
+        hazard_type: str,
+        severity: float,
+        confidence: float,
+        geometry: Dict[str, Any],
+        center: Dict[str, float],
+        radius_km: float,
+        drivers: List[str],
+        timestamp: str,
+    ) -> None:
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT INTO global_hazards (
+                zone_id, hazard_type, severity, confidence, geometry_json,
+                center_lat, center_lon, radius_km, drivers_json, timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(zone_id) DO UPDATE SET
+                severity=excluded.severity,
+                confidence=excluded.confidence,
+                geometry_json=excluded.geometry_json,
+                radius_km=excluded.radius_km,
+                drivers_json=excluded.drivers_json,
+                timestamp=excluded.timestamp;
+            """, (zone_id, hazard_type, severity, confidence, json.dumps(geometry), center.get("lat", 0.0), center.get("lon", 0.0), radius_km, json.dumps(drivers), timestamp))
+            conn.commit()
+            if self.db_path != ":memory:":
+                conn.close()
+
+    def get_global_hazards(self, limit: int = 50, hazard_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            if hazard_type:
+                cursor.execute("SELECT * FROM global_hazards WHERE hazard_type = ? ORDER BY severity DESC LIMIT ?", (hazard_type.upper(), limit))
+            else:
+                cursor.execute("SELECT * FROM global_hazards ORDER BY severity DESC LIMIT ?", (limit,))
+            rows = cursor.fetchall()
+            results = []
+            for r in rows:
+                d = dict(r)
+                if "geometry_json" in d:
+                    try:
+                        d["geometry"] = json.loads(d["geometry_json"])
+                    except Exception:
+                        d["geometry"] = {}
+                if "drivers_json" in d:
+                    try:
+                        d["drivers"] = json.loads(d["drivers_json"])
+                    except Exception:
+                        d["drivers"] = []
+                d["center"] = {"lat": d.get("center_lat"), "lon": d.get("center_lon")}
+                results.append(d)
+            if self.db_path != ":memory:":
+                conn.close()
+            return results
+
+    def save_external_event(
+        self,
+        event_id: str,
+        event_type: str,
+        title: str,
+        severity: float,
+        alert_level: str,
+        lat: float,
+        lon: float,
+        source: str,
+        timestamp: str,
+    ) -> None:
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT INTO external_events (
+                event_id, event_type, title, severity, alert_level,
+                latitude, longitude, source, timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(event_id) DO UPDATE SET
+                severity=excluded.severity,
+                alert_level=excluded.alert_level,
+                timestamp=excluded.timestamp;
+            """, (event_id, event_type, title, severity, alert_level, lat, lon, source, timestamp))
+            conn.commit()
+            if self.db_path != ":memory:":
+                conn.close()
+
+    def get_external_events(self, limit: int = 50, event_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            if event_type:
+                cursor.execute("SELECT * FROM external_events WHERE event_type = ? ORDER BY timestamp DESC LIMIT ?", (event_type.upper(), limit))
+            else:
+                cursor.execute("SELECT * FROM external_events ORDER BY timestamp DESC LIMIT ?", (limit,))
             rows = cursor.fetchall()
             results = [dict(r) for r in rows]
             if self.db_path != ":memory:":

@@ -28,3 +28,18 @@ build/
 *.sqlite3
 .DS_Store
 Thumbs.db
+
+# Temporary workspace, installers & logs
+Work/
+*.msi
+*.log
+.gev-logs/
+.gev-cache/
+screenshots/
+qa-shots/
+.agent/
+.agents/
+_bmad/
+_bmad-output/
+verify_global_browser.mjs
+verify_runtime_browser.mjs
