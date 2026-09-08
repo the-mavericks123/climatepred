@@ -187,6 +187,8 @@ class SimulationResult(BaseModel):
     compound_events: List[CompoundEvent] = Field(default_factory=list, description="Simulated Phase 4 cascading events")
     vulnerability_zones: List[VulnerabilityZoneAssessment] = Field(default_factory=list, description="Simulated Phase 5 human impact")
     evacuation_routes: List[EvacuationRecommendation] = Field(default_factory=list, description="Simulated Phase 6 evacuation routes")
+    response_plan: Optional[Dict[str, Any]] = Field(default=None, description="Simulated Phase 9 response directives")
+    explanation: Optional[Dict[str, Any]] = Field(default=None, description="Simulated Phase 10 explainability audit")
     confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Confidence in simulation modeling pipeline")
     provenance_hash: str = Field(..., min_length=8, description="Cryptographic SHA-256 simulation fingerprint")
 
@@ -198,6 +200,8 @@ class SimulationRunRequest(BaseModel):
     scenario_id: str = Field(..., min_length=1, description="Identifier of cataloged scenario to execute")
     base_state: Optional[Union[DigitalTwinState, str]] = Field(default="current", description="Optional explicit base state or 'current' for live snapshot")
     changes: Optional[ScenarioParameters] = Field(default=None, description="Optional parameter overrides for the scenario")
+    region: Optional[str] = Field(default=None, description="Target region name or coordinates for baseline binding")
+    current_telemetry: Optional[Dict[str, Any]] = Field(default=None, description="Optional live telemetry overrides from client")
 
 
 

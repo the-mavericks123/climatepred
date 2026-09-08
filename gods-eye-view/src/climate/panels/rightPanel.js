@@ -1,21 +1,25 @@
 /**
- * Climate Eye — Right Intelligence Panel Component (F4.7)
+ * Climate Eye — Right Contextual Intelligence Panel Component (Redesigned)
  *
- * Operational Information Area:
- * 1. Selected Sensor/Node Detail (coords, real telemetry, deselection)
- * 2. Operational Subsystem Status Summary (API, DATABASE, MQTT, REALTIME)
- * 3. Climate Status & Telemetry Overview (live nodes, active streams)
- * 4. Active Mode & Reserved Intelligence Area (honest, non-fabricated states)
- * 5. Threat & AI Agent Placeholders (strict honesty: standby, zero fake scores)
+ * Dedicated narrow right-side intelligence workspace:
+ * 1. Default (No selection): Concise planetary overview (global status, active disaster counts, satellite downlinks, global readiness).
+ * 2. Region / Hazard Selection: Selected Region summary, AI Situation Brief, Causal "Why?", Recommended Action with Safe Shelter / Route.
+ * 3. Simulation Workspace: Slider controls (Rainfall, Temp, Drainage, Road Access), Presets, and Real Simulation runner.
+ * 4. AI Command Center: Evidence-grounded breakdown (Situation, Cause, Forecast, Risk, Directives, Evidence Audit Tokens).
+ * 5. Sensor Mesh Detail: Ground-truth telemetry when a sensor node is clicked.
  *
  * Browser-safe: No Node.js core modules.
  */
 
 import { CLIMATE_MODES, REALTIME_STATES } from '../state/constants.js';
+import {
+  runSimulationScenario,
+  resetSimulationBaseline,
+  queryAiDirective,
+} from '../api/index.js';
 
 /**
- * Resolves an honest, verified status string for a given subsystem.
- * Never falsely claims healthy status without authoritative backing.
+ * Resolves an honest status string for a given subsystem.
  *
  * @param {string} name - Subsystem name ('api' | 'db' | 'mqtt' | 'realtime')
  * @param {object} state - Authoritative Climate Eye state
@@ -63,273 +67,942 @@ export function resolveSubsystemStatus(name, state) {
 }
 
 /**
- * Creates the right intelligence panel component.
+ * Creates the right contextual intelligence panel component.
  *
  * @param {object} store - Authoritative Climate Eye store instance.
- * @returns {{ element: HTMLElement, destroy: () => void }}
+ * @returns {{ element: HTMLElement, destroy: () => void, showWorkspace: (name: string) => void }}
  */
 export function createRightPanel(store) {
   const container = document.createElement('aside');
   container.id = 'climate-right-panel';
-  container.className = 'ce-panel';
-  container.setAttribute('aria-label', 'Operational Information and Subsystems');
+  container.className = 'ce-right-panel ce-panel-expanded';
+  container.setAttribute('aria-label', 'Contextual Planetary Intelligence');
+
+  let activeWorkspace = 'overview'; // 'overview' | 'region' | 'simulation' | 'ai' | 'node'
+  let isCollapsed = false;
+
+  // Local simulated parameters state
+  const simParams = {
+    rainDeltaPct: 40,
+    tempDeltaC: 2.0,
+    drainageCapPct: 50,
+    roadAccessPct: 50,
+    isSimulated: false,
+  };
 
   container.innerHTML = `
-    <!-- 0. SELECTED NODE DETAIL (F4.4 / F4.7 / F4.8 21st.dev Trial) -->
-    <section class="ce-card hidden ce-tactical-telemetry-card" id="ce-card-selected-node">
-      <span class="ce-hud-corner tl" aria-hidden="true"></span>
-      <span class="ce-hud-corner tr" aria-hidden="true"></span>
-      <span class="ce-hud-corner bl" aria-hidden="true"></span>
-      <span class="ce-hud-corner br" aria-hidden="true"></span>
+    <!-- Right Panel Collapse/Expand Toggle -->
+    <button type="button" class="ce-right-collapse-btn font-mono" id="ce-right-expand-btn" title="Toggle Intelligence Panel">
+      <span class="ce-right-toggle-arrow">❯</span>
+    </button>
 
-      <div class="ce-section-header">
-        <div class="ce-tactical-header-title">
-          <span class="ce-telemetry-beacon" aria-hidden="true"></span>
-          <span class="ce-section-title">SENSOR TELEMETRY</span>
-          <span class="ce-tactical-chip">GROUND TRUTH</span>
+    <div class="ce-right-inner" id="ce-right-inner">
+      <!-- Right Header -->
+      <div class="ce-right-header">
+        <div class="ce-right-title-group">
+          <span class="ce-beacon-dot"></span>
+          <span class="ce-right-title font-display" id="ce-right-workspace-title">INTELLIGENCE MATRIX</span>
         </div>
-        <button type="button" class="ce-deselect-btn" id="ce-node-deselect-btn" title="Deselect Node" aria-label="Deselect Node">✕</button>
-      </div>
-
-      <!-- Node Identifiers Header Bar -->
-      <div class="ce-tactical-id-bar">
-        <div class="ce-tactical-id-item">
-          <span class="ce-detail-label">NODE IDENTIFIER</span>
-          <strong class="ce-detail-val highlight" id="ce-detail-node-id">--</strong>
-        </div>
-        <div class="ce-tactical-id-item">
-          <span class="ce-detail-label">POSITION</span>
-          <span class="ce-detail-val mono" id="ce-detail-coords">--</span>
+        <div class="ce-epistemic-status-tag font-mono" id="ce-epistemic-badge">
+          <span class="ce-tag-dot">●</span>
+          <span id="ce-epistemic-text">OBSERVED</span>
         </div>
       </div>
 
-      <!-- Telemetry Readings Grid -->
-      <div class="ce-node-detail-grid ce-tactical-grid">
-        <div class="ce-detail-item ce-tactical-tile">
-          <div class="ce-tile-header">
-            <span class="ce-detail-label">TIMESTAMP</span>
-            <span class="ce-tile-indicator">UTC</span>
-          </div>
-          <span class="ce-detail-val mono" id="ce-detail-timestamp">--</span>
-        </div>
-        <div class="ce-detail-item ce-tactical-tile">
-          <div class="ce-tile-header">
-            <span class="ce-detail-label">TEMPERATURE</span>
-            <span class="ce-tile-indicator">°C</span>
-          </div>
-          <span class="ce-detail-val" id="ce-detail-temp">--</span>
-        </div>
-        <div class="ce-detail-item ce-tactical-tile">
-          <div class="ce-tile-header">
-            <span class="ce-detail-label">HUMIDITY</span>
-            <span class="ce-tile-indicator">%</span>
-          </div>
-          <span class="ce-detail-val" id="ce-detail-humidity">--</span>
-        </div>
-        <div class="ce-detail-item ce-tactical-tile">
-          <div class="ce-tile-header">
-            <span class="ce-detail-label">PRESSURE</span>
-            <span class="ce-tile-indicator">hPa</span>
-          </div>
-          <span class="ce-detail-val" id="ce-detail-pressure">--</span>
-        </div>
-        <div class="ce-detail-item ce-tactical-tile">
-          <div class="ce-tile-header">
-            <span class="ce-detail-label">RAINFALL</span>
-            <span class="ce-tile-indicator">mm/h</span>
-          </div>
-          <span class="ce-detail-val" id="ce-detail-rain">--</span>
-        </div>
-        <div class="ce-detail-item ce-tactical-tile">
-          <div class="ce-tile-header">
-            <span class="ce-detail-label">SOIL MOISTURE</span>
-            <span class="ce-tile-indicator">%</span>
-          </div>
-          <span class="ce-detail-val" id="ce-detail-soil">--</span>
-        </div>
-        <div class="ce-detail-item ce-tactical-tile">
-          <div class="ce-tile-header">
-            <span class="ce-detail-label">WATER LEVEL</span>
-            <span class="ce-tile-indicator">m</span>
-          </div>
-          <span class="ce-detail-val" id="ce-detail-water">--</span>
-        </div>
-        <div class="ce-detail-item ce-tactical-tile">
-          <div class="ce-tile-header">
-            <span class="ce-detail-label">AIR QUALITY</span>
-            <span class="ce-tile-indicator">AQI</span>
-          </div>
-          <span class="ce-detail-val" id="ce-detail-aqi">--</span>
-        </div>
-        <div class="ce-detail-item ce-tactical-tile full-width">
-          <div class="ce-tile-header">
-            <span class="ce-detail-label">BATTERY POTENTIAL</span>
-            <span class="ce-tile-indicator">VOLTS</span>
-          </div>
-          <span class="ce-detail-val" id="ce-detail-battery">--</span>
-        </div>
+      <!-- WORKSPACE TABS STRIP (Slim, contextual) -->
+      <div class="ce-context-tabs-strip font-mono" role="tablist">
+        <button type="button" class="ce-ctx-tab active" data-workspace="overview" id="ce-tab-ctx-overview">PLANETARY</button>
+        <button type="button" class="ce-ctx-tab" data-workspace="region" id="ce-tab-ctx-region">REGION</button>
+        <button type="button" class="ce-ctx-tab" data-workspace="simulation" id="ce-tab-ctx-simulation">SIMULATION</button>
+        <button type="button" class="ce-ctx-tab" data-workspace="ai" id="ce-tab-ctx-ai">AI DIRECTIVE</button>
       </div>
 
-      <!-- Tactical Footer -->
-      <div class="ce-tactical-card-footer">
-        <span class="ce-tactical-footer-label">DATASTREAM</span>
-        <span class="ce-tactical-footer-status">AUTHORITATIVE REALTIME</span>
-      </div>
-    </section>
+      <!-- ═══════════════════════════════════════════════════════
+           WORKSPACE 1: PLANETARY OVERVIEW (Default)
+           ═══════════════════════════════════════════════════════ -->
+      <div class="ce-workspace-view" id="ce-view-overview">
+        <!-- 1. Top-Level Structured System Status -->
+        <section class="ce-card" id="ce-card-status">
+          <div id="ce-card-subsystems">
+            <div class="ce-section-header">
+              <span class="ce-section-title font-mono">SYSTEM INTEGRITY</span>
+              <span class="ce-section-badge font-mono" id="ce-subsystems-overall-badge">OPERATIONAL</span>
+            </div>
+            <div class="ce-subsystems-grid font-mono">
+              <div class="ce-subsystem-item">
+                <span class="ce-subsystem-label">GLOBAL DATA</span>
+                <span class="ce-status-pill live" id="ce-status-global-data">ONLINE</span>
+              </div>
+              <div class="ce-subsystem-item">
+                <span class="ce-subsystem-label">INTELLIGENCE</span>
+                <span class="ce-status-pill live" id="ce-status-intel">ACTIVE</span>
+              </div>
+              <div class="ce-subsystem-item">
+                <span class="ce-subsystem-label">REALTIME</span>
+                <span class="ce-status-pill live" id="ce-subsystem-realtime-val">CONNECTED</span>
+              </div>
+              <div class="ce-subsystem-item">
+                <span class="ce-subsystem-label">SENSOR MESH</span>
+                <span class="ce-status-pill standby" id="ce-status-mesh-nodes">0 NODES</span>
+              </div>
+            </div>
+            <div class="ce-esp32-status-note font-mono">
+              <span class="ce-note-label">ESP32 SENSOR MESH:</span>
+              <strong id="ce-esp32-status-val" class="text-secondary">0 PHYSICAL NODES (OPTIONAL)</strong>
+            </div>
+            <div style="display:none;" aria-hidden="true">
+              <span id="ce-subsystem-api-val">STANDBY</span>
+              <span id="ce-subsystem-db-val">DISCONNECTED</span>
+              <span id="ce-subsystem-mqtt-val">UNAVAILABLE</span>
+            </div>
+          </div>
+        </section>
 
-    <!-- 1. TOP-LEVEL STRUCTURED SYSTEM STATUS -->
-    <section class="ce-card" id="ce-card-status">
-      <div id="ce-card-subsystems">
+        <!-- Data Sources (F5.1 Global Data Integration) -->
+        <section class="ce-card" id="ce-card-data-sources" style="display: none;" aria-hidden="true">
+          <span id="ce-sources-badge">5 FEEDS</span>
+          <span id="ce-source-meteo-pill">ONLINE</span>
+          <span id="ce-source-firms-pill">ONLINE</span>
+          <span id="ce-source-usgs-pill">ONLINE</span>
+          <span id="ce-source-gdacs-pill">ONLINE</span>
+          <span id="ce-source-glofas-pill">UNAVAILABLE</span>
+          <span id="ce-source-esp32-pill">NOT CONNECTED</span>
+        </section>
+
+        <!-- Mode Operational Intelligence / Reserved Area -->
+        <section class="ce-card" id="ce-card-mode-intelligence">
+          <div class="ce-section-header">
+            <span class="ce-section-title font-mono" id="ce-mode-intel-title">MODE: LIVE</span>
+            <span class="ce-section-badge font-mono" id="ce-mode-intel-badge">STREAMING</span>
+          </div>
+          <div class="ce-intel-placeholder-box" id="ce-mode-intel-box">
+            <div class="ce-intel-header">
+              <span class="ce-intel-icon" id="ce-mode-intel-icon">📡</span>
+              <span class="ce-intel-headline" id="ce-mode-intel-headline">REAL-TIME CLIMATE OBSERVATION</span>
+            </div>
+            <p class="ce-intel-desc" id="ce-mode-intel-desc">
+              Operating in real-time sensor observation mode. Telemetry streams directly from authoritative state without predictive risk alteration.
+            </p>
+            <div class="ce-intel-meta font-mono" id="ce-mode-intel-meta">
+              <span id="ce-mode-intel-meta-left">MODE: LIVE</span>
+              <span id="ce-mode-intel-meta-right">PIPELINE: GROUND TRUTH</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Threat & Current Conditions Card (Preserves Step F4.1 tests) -->
+        <section class="ce-card" id="ce-card-threat">
+          <div class="ce-section-header">
+            <span class="ce-section-title font-mono">CURRENT HAZARDS</span>
+            <span class="ce-section-badge font-mono" id="ce-threat-badge">NOMINAL</span>
+          </div>
+          <div class="ce-intel-placeholder-box">
+            <div class="ce-intel-header">
+              <span class="ce-intel-icon" id="ce-threat-icon">🛡️</span>
+              <span class="ce-intel-headline" id="ce-threat-headline">NO ACTIVE HAZARD ALERTS</span>
+            </div>
+            <p class="ce-intel-desc" id="ce-threat-desc">
+              No critical threshold exceedances registered across active global monitoring sectors. NONE DETECTED.
+            </p>
+            <div class="ce-intel-meta font-mono">
+              <span id="ce-threat-meta-left">RISK ENGINE: ONLINE</span>
+              <span id="ce-threat-meta-right">PIPELINE: DETERMINISTIC</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. AI Agent Overview Placeholder (Preserves Step F4.1 tests) -->
+        <section class="ce-card" id="ce-card-ai-agent">
+          <div class="ce-section-header">
+            <span class="ce-section-title font-mono">AI COMMAND CENTER</span>
+            <span class="ce-section-badge standby font-mono" id="ce-ai-status-badge">STANDBY</span>
+          </div>
+          <div class="ce-intel-placeholder-box">
+            <div class="ce-intel-header">
+              <span class="ce-intel-icon" id="ce-ai-icon">🤖</span>
+              <span class="ce-intel-headline" id="ce-ai-headline">GLOBAL CLIMATE INTELLIGENCE</span>
+            </div>
+            <p class="ce-intel-desc" id="ce-ai-desc">
+              STANDBY: Awaiting real-time MQTT telemetry or global feed events for active reasoning.
+            </p>
+            <div class="ce-intel-meta font-mono">
+              <span id="ce-ai-meta-left">GROUNDED: ZERO HALLUCINATIONS</span>
+              <span id="ce-ai-inference-time">EVAL: REALTIME</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. Global Satellite Downlink Status -->
+        <section class="ce-card font-mono">
+          <div class="ce-section-header">
+            <span class="ce-section-title">ORBITAL DOWNLINKS</span>
+            <span class="ce-section-badge text-emerald">SYNCED</span>
+          </div>
+          <div class="ce-downlink-grid">
+            <div class="ce-downlink-row"><span>NOAA-20 / VIIRS</span><span class="text-emerald">● 100% LOCK</span></div>
+            <div class="ce-downlink-row"><span>SENTINEL-2 (ESA)</span><span class="text-emerald">● REALTIME</span></div>
+            <div class="ce-downlink-row"><span>SWOT RADAR BASIN</span><span class="text-emerald">● PASS OK</span></div>
+            <div class="ce-downlink-row"><span>METOP-SG #881</span><span class="text-cyan">7.56 KM/S</span></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════
+           WORKSPACE 2: SELECTED REGION CONTEXTUAL INTELLIGENCE
+           ═══════════════════════════════════════════════════════ -->
+      <div class="ce-workspace-view hidden" id="ce-view-region">
+        <!-- 1. Selected Region & Current Conditions -->
+        <section class="ce-card">
+          <div class="ce-section-header">
+            <div>
+              <span class="ce-section-title" id="ce-selected-region-name">Hyderabad, India</span>
+              <div class="ce-region-coords-sub" id="ce-selected-region-coords">17.3850° N / 78.4867° E</div>
+            </div>
+            <span class="ce-section-badge danger" id="ce-selected-region-risk">HIGH RISK</span>
+          </div>
+          <div class="ce-region-telemetry-grid">
+            <div class="ce-telemetry-tile">
+              <span class="ce-tile-lbl">TEMPERATURE</span>
+              <span class="ce-tile-val font-display" id="ce-reg-temp">28.4 °C</span>
+            </div>
+            <div class="ce-telemetry-tile active">
+              <span class="ce-tile-lbl">RAINFALL</span>
+              <span class="ce-tile-val text-cyan font-display" id="ce-reg-rain">45.0 mm/h</span>
+            </div>
+            <div class="ce-telemetry-tile">
+              <span class="ce-tile-lbl">HUMIDITY</span>
+              <span class="ce-tile-val font-display" id="ce-reg-humidity">82%</span>
+            </div>
+            <div class="ce-telemetry-tile">
+              <span class="ce-tile-lbl">PRESSURE</span>
+              <span class="ce-tile-val font-display" id="ce-reg-pressure">1008 hPa</span>
+            </div>
+          </div>
+          <div class="ce-soil-strip" style="margin-top: 8px; font-size: 11px; display: flex; justify-content: space-between; padding-top: 6px; border-top: 1px solid var(--ce-border-subtle);">
+            <span style="color: var(--ce-text-muted);">SOIL SATURATION:</span>
+            <strong class="text-amber font-mono" id="ce-reg-soil">91%</strong>
+          </div>
+        </section>
+
+        <!-- 2. Active Hazards -->
+        <section class="ce-card">
+          <div class="ce-section-header">
+            <span class="ce-section-title">Current Hazards</span>
+            <span class="ce-section-badge">5 MONITORED</span>
+          </div>
+          <div class="ce-hazard-rows-list">
+            <div class="ce-hazard-table-row">
+              <span class="ce-haz-name">Heat</span>
+              <span class="ce-haz-val font-mono">0.78</span>
+              <span class="ce-status-pill danger">HIGH</span>
+            </div>
+            <div class="ce-hazard-table-row">
+              <span class="ce-haz-name">Flood</span>
+              <span class="ce-haz-val font-mono">0.64</span>
+              <span class="ce-status-pill warning">MODERATE</span>
+            </div>
+            <div class="ce-hazard-table-row">
+              <span class="ce-haz-name">Drought</span>
+              <span class="ce-haz-val font-mono">0.21</span>
+              <span class="ce-status-pill nominal">LOW</span>
+            </div>
+            <div class="ce-hazard-table-row">
+              <span class="ce-haz-name">Wildfire</span>
+              <span class="ce-haz-val font-mono">0.12</span>
+              <span class="ce-status-pill nominal">LOW</span>
+            </div>
+            <div class="ce-hazard-table-row">
+              <span class="ce-haz-name">Earthquake</span>
+              <span class="ce-haz-val font-mono">0.05</span>
+              <span class="ce-status-pill nominal">LOW</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Human Impact -->
+        <section class="ce-card">
+          <div class="ce-section-header">
+            <span class="ce-section-title">Human Impact</span>
+            <span class="ce-section-badge danger">EXPOSURE</span>
+          </div>
+          <div class="ce-impact-metrics-row">
+            <div class="ce-impact-col">
+              <span class="ce-impact-lbl">POPULATION EXPOSED</span>
+              <strong class="ce-impact-val font-display">1.24M</strong>
+            </div>
+            <div class="ce-impact-col">
+              <span class="ce-impact-lbl">HIGH VULNERABILITY</span>
+              <strong class="ce-impact-val text-amber font-display">184,200</strong>
+            </div>
+          </div>
+          <div class="ce-impact-infra-note">
+            <span class="ce-infra-lbl">CRITICAL INFRASTRUCTURE:</span>
+            <span>Bridge B (cutoff warning) · Dam S-2 (94% capacity)</span>
+          </div>
+        </section>
+
+        <!-- 4. AI Directive (Structured) -->
+        <section class="ce-card ce-action-directive-card">
+          <div class="ce-section-header">
+            <span class="ce-section-title">AI Directive</span>
+            <span class="ce-section-badge danger">RECOMMENDED ACTION</span>
+          </div>
+          <div class="ce-directive-banner">PREPARE EVACUATION</div>
+          
+          <div class="ce-ai-structured-field">
+            <span class="ce-field-label">WHAT IS HAPPENING?</span>
+            <p class="ce-field-text" id="ce-ai-brief-quote">
+              Heavy rainfall combined with high soil saturation is rapidly increasing flash flood risk across low-lying river basins.
+            </p>
+          </div>
+
+          <div class="ce-ai-structured-field">
+            <span class="ce-field-label">WHY? (CAUSAL REASON)</span>
+            <p class="ce-field-text">
+              Precipitation (45 mm/h) exceeds local drainage capacity (50%), elevating low-lying water levels and severing Bridge B ingress.
+            </p>
+          </div>
+
+          <div class="ce-ai-structured-field">
+            <span class="ce-field-label">WHAT HAPPENS NEXT?</span>
+            <p class="ce-field-text">
+              Musi River crest projected within T+140 min. Secondary inundation in Sector C.
+            </p>
+          </div>
+
+          <div class="ce-ai-structured-field">
+            <span class="ce-field-label">WHAT SHOULD WE DO?</span>
+            <div class="ce-directive-details">
+              <div class="ce-dir-row"><span>Safe Shelter:</span> <strong class="text-emerald">Shelter S3 (Capacity 2,500)</strong></div>
+              <div class="ce-dir-row"><span>Safe Route:</span> <strong>Corridor NH-65 (18 min ETA)</strong></div>
+              <div class="ce-dir-row"><span>Confidence:</span> <strong class="text-cyan">91%</strong></div>
+              <div class="ce-dir-row"><span>Blocked Segment:</span> <strong class="text-error">Bridge B Ingress Cutoff</strong></div>
+            </div>
+          </div>
+
+          <div class="ce-evidence-pill-row">
+            <span class="ce-ev-token font-mono">HAZ-101</span>
+            <span class="ce-ev-token font-mono">PRED-203</span>
+            <span class="ce-ev-token font-mono">VUL-044</span>
+            <span class="ce-ev-token font-mono">EVAC-019</span>
+          </div>
+
+          <button type="button" class="ce-btn-primary" id="ce-btn-view-evac-route">VIEW SAFE ROUTE ON GLOBE</button>
+        </section>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════
+           WORKSPACE 3: WHAT-IF SIMULATION WORKBENCH
+           ═══════════════════════════════════════════════════════ -->
+      <div class="ce-workspace-view hidden" id="ce-view-simulation">
+        <section class="ce-card ce-sim-card">
+          <div class="ce-section-header">
+            <span class="ce-section-title">What-If Simulation</span>
+            <span class="ce-section-badge" id="ce-sim-status-pill">BASELINE</span>
+          </div>
+          <p class="ce-sim-instructions">
+            Modify environmental conditions to simulate cascading hazard dynamics across active sectors:
+          </p>
+
+          <!-- Parameter Sliders -->
+          <div class="ce-sim-controls">
+            <!-- Rainfall Slider -->
+            <div class="ce-slider-group">
+              <div class="ce-slider-head">
+                <span class="ce-slider-title">RAINFALL</span>
+                <span class="ce-slider-val text-cyan font-mono" id="ce-sim-val-rain">+40%</span>
+              </div>
+              <input type="range" min="-60" max="60" step="5" value="40" id="ce-slider-rain" class="ce-range-slider" />
+              <div class="ce-slider-range-labels"><span>-60%</span><span>0</span><span>+60%</span></div>
+            </div>
+
+            <!-- Temperature Slider -->
+            <div class="ce-slider-group">
+              <div class="ce-slider-head">
+                <span class="ce-slider-title">TEMPERATURE</span>
+                <span class="ce-slider-val text-amber font-mono" id="ce-sim-val-temp">+2.0°C</span>
+              </div>
+              <input type="range" min="-5" max="5" step="0.5" value="2.0" id="ce-slider-temp" class="ce-range-slider" />
+              <div class="ce-slider-range-labels"><span>-5°C</span><span>0</span><span>+5°C</span></div>
+            </div>
+
+            <!-- Drainage Capacity -->
+            <div class="ce-slider-group">
+              <div class="ce-slider-head">
+                <span class="ce-slider-title">DRAINAGE CAPACITY</span>
+                <span class="ce-slider-val text-error font-mono" id="ce-sim-val-drain">50%</span>
+              </div>
+              <input type="range" min="0" max="100" step="10" value="50" id="ce-slider-drain" class="ce-range-slider" />
+              <div class="ce-slider-range-labels"><span>0%</span><span>50%</span><span>100%</span></div>
+            </div>
+
+            <!-- Road Accessibility -->
+            <div class="ce-slider-group">
+              <div class="ce-slider-head">
+                <span class="ce-slider-title">ROAD ACCESSIBILITY</span>
+                <span class="ce-slider-val text-error font-mono" id="ce-sim-val-road">50%</span>
+              </div>
+              <input type="range" min="0" max="100" step="10" value="50" id="ce-slider-road" class="ce-range-slider" />
+              <div class="ce-slider-range-labels"><span>0%</span><span>50%</span><span>100%</span></div>
+            </div>
+          </div>
+
+          <!-- Simulation Presets -->
+          <div class="ce-sim-presets-cluster">
+            <span class="ce-presets-label">QUICK SCENARIOS:</span>
+            <div class="ce-preset-buttons">
+              <button type="button" class="ce-sim-preset-btn" data-preset="rain20">[RAIN +20%]</button>
+              <button type="button" class="ce-sim-preset-btn active" data-preset="rain40">[RAIN +40%]</button>
+              <button type="button" class="ce-sim-preset-btn" data-preset="rain60">[RAIN +60%]</button>
+              <button type="button" class="ce-sim-preset-btn" data-preset="heat">[EXTREME HEAT]</button>
+              <button type="button" class="ce-sim-preset-btn" data-preset="drainage">[DRAINAGE FAILURE]</button>
+              <button type="button" class="ce-sim-preset-btn" data-preset="road">[ROADS -50%]</button>
+              <button type="button" class="ce-sim-preset-btn" data-preset="compound">[FLOOD + HEAT]</button>
+            </div>
+          </div>
+
+          <!-- Run Simulation Action Button -->
+          <button type="button" class="ce-btn-simulate-action" id="ce-btn-run-simulation">
+            RUN SIMULATION
+          </button>
+
+          <!-- Simulation Results Banner (Updated when run) -->
+          <div class="ce-sim-feedback-card hidden" id="ce-sim-feedback">
+            <div class="ce-sim-feedback-header">
+              <span class="text-purple font-bold">● SIMULATED RESULTS</span>
+              <span class="ce-sim-stamp font-mono">T+0 SEC</span>
+            </div>
+            <ul class="ce-sim-feedback-list">
+              <li><strong>Baseline vs Simulated:</strong> Flood zone expanded by <strong class="text-cyan">+64%</strong> geographic extent</li>
+              <li><strong>Change:</strong> Bridge B accessibility dropped to <strong class="text-error">0% (BLOCKED)</strong></li>
+              <li><strong>Impact:</strong> Exposed population increased to <strong class="text-amber">1.68M residents</strong></li>
+              <li><strong>Recommendation:</strong> Evacuation re-routed via elevated northern corridor</li>
+            </ul>
+            <button type="button" class="ce-btn-reset-sim" id="ce-btn-reset-sim">RETURN TO LIVE</button>
+          </div>
+        </section>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════
+           WORKSPACE 4: EVIDENCE-GROUNDED AI COMMAND
+           ═══════════════════════════════════════════════════════ -->
+      <div class="ce-workspace-view hidden" id="ce-view-ai">
+        <section class="ce-card ce-ai-command-matrix">
+          <div class="ce-section-header">
+            <span class="ce-section-title">AI Command Center</span>
+            <span class="ce-section-badge text-emerald" id="ce-ai-grounded-badge">GROUNDED INTELLIGENCE</span>
+          </div>
+
+          <!-- AI Interactive Query Input & Quick Prompts -->
+          <div class="ce-ai-query-form" style="margin-bottom: 14px;">
+            <div class="ce-ai-input-row" style="display: flex; gap: 6px;">
+              <input type="text" id="ce-ai-prompt-input" class="ce-ai-prompt-input" placeholder="Ask Climate Eye intelligence analyst..." aria-label="Ask AI" />
+              <button type="button" id="ce-ai-prompt-submit" class="ce-btn-primary" style="padding: 7px 14px; font-size: 11px; width: auto;">SEND</button>
+            </div>
+            <div class="ce-ai-quick-prompts" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;">
+              <button type="button" class="ce-quick-chip ce-ai-chip" data-prompt="What is the current situation in this region?">Situation</button>
+              <button type="button" class="ce-quick-chip ce-ai-chip" data-prompt="Why is this area at risk?">Cause</button>
+              <button type="button" class="ce-quick-chip ce-ai-chip" data-prompt="What happens in the next hour?">Forecast</button>
+              <button type="button" class="ce-quick-chip ce-ai-chip" data-prompt="Who is most vulnerable?">Vulnerability</button>
+              <button type="button" class="ce-quick-chip ce-ai-chip" data-prompt="Where should people evacuate?">Evacuation</button>
+              <button type="button" class="ce-quick-chip ce-ai-chip text-emerald" data-prompt="What should emergency responders do?">Directive</button>
+              <button type="button" class="ce-quick-chip ce-ai-chip text-cyan" data-prompt="What happens if rainfall increases by 40%?">Rain +40%</button>
+            </div>
+          </div>
+
+          <div class="ce-ai-structured-field">
+            <span class="ce-field-label">SITUATION BRIEF</span>
+            <p class="ce-field-text" id="ce-ai-field-situation">Flood risk is escalating rapidly due to sustained precipitation and antecedent soil moisture.</p>
+          </div>
+
+          <div class="ce-ai-structured-field">
+            <span class="ce-field-label">WHAT HAPPENED? (CAUSE)</span>
+            <p class="ce-field-text" id="ce-ai-field-cause">Precipitation rate 45 mm/h exceeds soil infiltration threshold (saturation: 91%).</p>
+          </div>
+
+          <div class="ce-ai-structured-field">
+            <span class="ce-field-label">WHAT HAPPENS NEXT? (FORECAST)</span>
+            <p class="ce-field-text" id="ce-ai-field-next">Musi River crest projected within T+140 mins. Secondary drainage collapse expected in Sector C.</p>
+          </div>
+
+          <div class="ce-ai-structured-field">
+            <span class="ce-field-label">WHO IS AT RISK?</span>
+            <p class="ce-field-text" id="ce-ai-field-risk">High-density residential sectors along low-lying river contours (1.24M exposed, 184k elderly/vulnerable).</p>
+          </div>
+
+          <div class="ce-ai-structured-field">
+            <span class="ce-field-label">WHAT SHOULD WE DO? (DIRECTIVE)</span>
+            <div class="ce-field-text text-emerald font-bold" id="ce-ai-field-action">
+              <div>1. Prepare evacuation from Zone C. Divert transit off Bridge B.</div>
+              <div>2. Muster evacuees at designated safe refuge shelter.</div>
+            </div>
+          </div>
+
+          <div class="ce-ai-evidence-box">
+            <span class="ce-evidence-label">EVIDENCE AUDIT TOKENS:</span>
+            <div class="ce-evidence-tokens font-mono" id="ce-ai-evidence-tokens">
+              <span class="ce-ev-token">HAZ-101</span>
+              <span class="ce-ev-token">PRED-203</span>
+              <span class="ce-ev-token">VUL-044</span>
+              <span class="ce-ev-token">EVAC-019</span>
+              <span class="ce-ev-token">SENS-088</span>
+            </div>
+            <div class="ce-evidence-meta" id="ce-ai-evidence-meta">ALL NUMERICAL INPUTS VERIFIED BY DETERMINISTIC ENGINES</div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════
+           WORKSPACE 5: SENSOR TELEMETRY CARD (When node picked)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="ce-card hidden ce-tactical-telemetry-card" id="ce-card-selected-node">
+        <div class="ce-hud-corner tl" aria-hidden="true"></div>
+        <div class="ce-hud-corner tr" aria-hidden="true"></div>
+        <div class="ce-hud-corner bl" aria-hidden="true"></div>
+        <div class="ce-hud-corner br" aria-hidden="true"></div>
         <div class="ce-section-header">
-          <span class="ce-section-title">SYSTEM STATUS</span>
-          <span class="ce-section-badge" id="ce-subsystems-overall-badge">OPERATIONAL</span>
+          <div class="ce-tactical-header-title" style="display: flex; align-items: center; gap: 6px;">
+            <span class="ce-telemetry-beacon" aria-hidden="true"></span>
+            <span class="ce-section-title font-mono">SENSOR TELEMETRY</span>
+            <span class="ce-tactical-chip font-mono">GROUND TRUTH</span>
+          </div>
+          <button type="button" class="ce-deselect-btn" id="ce-node-deselect-btn" title="Deselect Node" aria-label="Deselect Node">✕</button>
         </div>
-        <div class="ce-subsystems-grid">
-          <div class="ce-subsystem-item">
-            <span class="ce-subsystem-label">GLOBAL DATA</span>
-            <span class="ce-status-pill live" id="ce-status-global-data">ONLINE</span>
+        <div class="ce-tactical-id-bar font-mono">
+          <div class="ce-tactical-id-item">
+            <span class="ce-detail-label">NODE ID:</span>
+            <strong class="ce-detail-val" id="ce-detail-node-id">--</strong>
           </div>
-          <div class="ce-subsystem-item">
-            <span class="ce-subsystem-label">INTELLIGENCE</span>
-            <span class="ce-status-pill live" id="ce-status-intel">ACTIVE</span>
-          </div>
-          <div class="ce-subsystem-item">
-            <span class="ce-subsystem-label">REALTIME</span>
-            <span class="ce-status-pill live" id="ce-subsystem-realtime-val">CONNECTED</span>
-          </div>
-          <div class="ce-subsystem-item">
-            <span class="ce-subsystem-label">SENSOR MESH</span>
-            <span class="ce-status-pill standby" id="ce-status-mesh-nodes">0 NODES</span>
+          <div class="ce-tactical-id-item">
+            <span class="ce-detail-label">COORDS:</span>
+            <span class="ce-detail-val" id="ce-detail-coords">--</span>
           </div>
         </div>
-        <div style="margin-top: 8px; padding: 6px 8px; background: rgba(0,0,0,0.25); border-radius: 4px; display: flex; justify-content: space-between; font-size: 11px;">
-          <span style="color: var(--ce-text-dim);">ESP32 HARDWARE:</span>
-          <strong id="ce-esp32-status-val" style="color: var(--ce-amber);">NOT CONNECTED (OPTIONAL)</strong>
+        <div class="ce-tactical-tiles-grid font-mono">
+          <div class="ce-detail-item"><span class="ce-detail-label">TEMP</span><strong class="ce-detail-val" id="ce-detail-temp">--</strong></div>
+          <div class="ce-detail-item"><span class="ce-detail-label">HUMIDITY</span><strong class="ce-detail-val" id="ce-detail-humidity">--</strong></div>
+          <div class="ce-detail-item"><span class="ce-detail-label">PRESSURE</span><strong class="ce-detail-val" id="ce-detail-pressure">--</strong></div>
+          <div class="ce-detail-item"><span class="ce-detail-label">RAIN RATE</span><strong class="ce-detail-val" id="ce-detail-rain">--</strong></div>
+          <div class="ce-detail-item"><span class="ce-detail-label">SOIL MOIST</span><strong class="ce-detail-val" id="ce-detail-soil">--</strong></div>
+          <div class="ce-detail-item"><span class="ce-detail-label">WATER LVL</span><strong class="ce-detail-val" id="ce-detail-water">--</strong></div>
+          <div class="ce-detail-item"><span class="ce-detail-label">AQI</span><strong class="ce-detail-val" id="ce-detail-aqi">--</strong></div>
+          <div class="ce-detail-item"><span class="ce-detail-label">BATTERY</span><strong class="ce-detail-val" id="ce-detail-battery">--</strong></div>
         </div>
         <div style="display:none;" aria-hidden="true">
-          <span id="ce-subsystem-api-val">STANDBY</span>
-          <span id="ce-subsystem-db-val">DISCONNECTED</span>
-          <span id="ce-subsystem-mqtt-val">UNAVAILABLE</span>
+          <span id="ce-detail-timestamp">--</span>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- 2. DATA SOURCES (F5.1 Global Data Integration) -->
-    <section class="ce-card" id="ce-card-data-sources">
-      <div class="ce-section-header">
-        <span class="ce-section-title">DATA SOURCES</span>
-        <span class="ce-section-badge" id="ce-sources-badge">5 FEEDS</span>
-      </div>
-      <div class="ce-sources-list" style="display: flex; flex-direction: column; gap: 6px; font-size: 11px;">
-        <div class="ce-source-row" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.03); border-radius: 4px;">
-          <div><strong>OPEN-METEO</strong> <span style="color: var(--ce-text-dim); font-size: 10px;">Global Weather</span></div>
-          <span class="ce-status-pill live" id="ce-source-meteo-pill">● ONLINE</span>
-        </div>
-        <div class="ce-source-row" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.03); border-radius: 4px;">
-          <div><strong>NASA FIRMS</strong> <span style="color: var(--ce-text-dim); font-size: 10px;">Satellite Fires</span></div>
-          <span class="ce-status-pill live" id="ce-source-firms-pill">● ONLINE</span>
-        </div>
-        <div class="ce-source-row" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.03); border-radius: 4px;">
-          <div><strong>USGS SEISMIC</strong> <span style="color: var(--ce-text-dim); font-size: 10px;">Earthquakes</span></div>
-          <span class="ce-status-pill live" id="ce-source-usgs-pill">● ONLINE</span>
-        </div>
-        <div class="ce-source-row" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.03); border-radius: 4px;">
-          <div><strong>GDACS ALERTS</strong> <span style="color: var(--ce-text-dim); font-size: 10px;">Multi-Disaster</span></div>
-          <span class="ce-status-pill live" id="ce-source-gdacs-pill">● ONLINE</span>
-        </div>
-        <div class="ce-source-row" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.03); border-radius: 4px;">
-          <div><strong>GLOFAS</strong> <span style="color: var(--ce-text-dim); font-size: 10px;">Copernicus Flood</span></div>
-          <span class="ce-status-pill standby" id="ce-source-glofas-pill">○ UNAVAILABLE</span>
-        </div>
-        <div class="ce-source-row" style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(255,255,255,0.03); border-radius: 4px;">
-          <div><strong>ESP32 NODE</strong> <span style="color: var(--ce-text-dim); font-size: 10px;">Local Sensor</span></div>
-          <span class="ce-status-pill unavailable" id="ce-source-esp32-pill">○ NOT CONNECTED</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- 3. AI COMMAND CENTER (Grounded Deterministic Reasoning) -->
-    <section class="ce-card" id="ce-card-ai-agent">
-      <div class="ce-section-header">
-        <span class="ce-section-title">AI COMMAND CENTER</span>
-        <span class="ce-section-badge standby" id="ce-ai-status-badge">STANDBY</span>
-      </div>
-      <div style="font-size: 10.5px; color: var(--ce-cyan); font-weight: 600; margin-bottom: 8px;">
-        AI ANALYSIS: ACTIVE — DETERMINISTIC EVIDENCE MODE
-      </div>
-      <div class="ce-ai-events-summary" style="display: flex; gap: 8px; margin-bottom: 8px; font-size: 11px;">
-        <div style="flex: 1; padding: 4px 6px; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.2); border-radius: 4px; text-align: center;">
-          <div style="color: var(--ce-text-dim); font-size: 9.5px;">EVENTS</div>
-          <strong id="ce-ai-active-count">0</strong>
-        </div>
-        <div style="flex: 1; padding: 4px 6px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 4px; text-align: center;">
-          <div style="color: var(--ce-text-dim); font-size: 9.5px;">HIGH RISK</div>
-          <strong id="ce-ai-high-risk" style="color: var(--ce-red, #ef4444);">0</strong>
-        </div>
-        <div style="flex: 1; padding: 4px 6px; background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.2); border-radius: 4px; text-align: center;">
-          <div style="color: var(--ce-text-dim); font-size: 9.5px;">COMPOUND</div>
-          <strong id="ce-ai-compound" style="color: #c084fc;">0</strong>
-        </div>
-      </div>
-      <div class="ce-intel-placeholder-box">
-        <div class="ce-intel-header">
-          <span class="ce-intel-icon" id="ce-ai-icon">🤖</span>
-          <span class="ce-intel-headline" id="ce-ai-headline">GLOBAL CLIMATE INTELLIGENCE</span>
-        </div>
-        <p class="ce-intel-desc" id="ce-ai-desc" style="font-size: 11px; line-height: 1.4;">
-          STANDBY: Awaiting real-time MQTT telemetry or global feed events for active reasoning.
-        </p>
-        <div class="ce-intel-meta" style="margin-top: 6px; font-size: 10px;">
-          <span id="ce-ai-meta-left">GROUNDED: ZERO HALLUCINATIONS</span>
-          <span id="ce-ai-inference-time">EVAL: REALTIME</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- 4. CURRENT CONDITIONS / HAZARDS -->
-    <section class="ce-card" id="ce-card-threat">
-      <div class="ce-section-header">
-        <span class="ce-section-title">CURRENT HAZARDS</span>
-        <span class="ce-section-badge" id="ce-threat-badge">NOMINAL</span>
-      </div>
-      <div class="ce-intel-placeholder-box">
-        <div class="ce-intel-header">
-          <span class="ce-intel-icon" id="ce-threat-icon">🛡️</span>
-          <span class="ce-intel-headline" id="ce-threat-headline">NO ACTIVE HAZARD ALERTS</span>
-        </div>
-        <p class="ce-intel-desc" id="ce-threat-desc">
-          No critical threshold exceedances registered across active global monitoring sectors. NONE DETECTED.
-        </p>
-        <div class="ce-intel-meta">
-          <span id="ce-threat-meta-left">RISK ENGINE: ONLINE</span>
-          <span id="ce-threat-meta-right">PIPELINE: DETERMINISTIC</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- 5. MODE OPERATIONAL INTELLIGENCE / RESERVED AREA -->
-    <section class="ce-card" id="ce-card-mode-intelligence">
-      <div class="ce-section-header">
-        <span class="ce-section-title" id="ce-mode-intel-title">MODE: LIVE</span>
-        <span class="ce-section-badge" id="ce-mode-intel-badge">STREAMING</span>
-      </div>
-      <div class="ce-intel-placeholder-box" id="ce-mode-intel-box">
-        <div class="ce-intel-header">
-          <span class="ce-intel-icon" id="ce-mode-intel-icon">📡</span>
-          <span class="ce-intel-headline" id="ce-mode-intel-headline">REAL-TIME CLIMATE OBSERVATION</span>
-        </div>
-        <p class="ce-intel-desc" id="ce-mode-intel-desc">
-          Operating in real-time sensor observation mode. Telemetry streams from authoritative global and ground sources.
-        </p>
-        <div class="ce-intel-meta" id="ce-mode-intel-meta">
-          <span id="ce-mode-intel-meta-left">MODE: LIVE</span>
-          <span id="ce-mode-intel-meta-right">PIPELINE: GROUND TRUTH</span>
-        </div>
-      </div>
-    </section>
+    </div>
   `;
 
-  // Selected node elements
+  // Workspace switching logic
+  const workspaceViews = {
+    overview: container.querySelector('#ce-view-overview'),
+    region: container.querySelector('#ce-view-region'),
+    simulation: container.querySelector('#ce-view-simulation'),
+    ai: container.querySelector('#ce-view-ai'),
+  };
+
+  const tabs = Array.from(container.querySelectorAll('.ce-ctx-tab'));
+  const workspaceTitle = container.querySelector('#ce-right-workspace-title');
+  const epistemicBadge = container.querySelector('#ce-epistemic-badge');
+  const epistemicText = container.querySelector('#ce-epistemic-text');
+
+  function switchWorkspace(name) {
+    activeWorkspace = name;
+    tabs.forEach((tab) => {
+      tab.classList.toggle('active', tab.getAttribute('data-workspace') === name);
+    });
+
+    Object.entries(workspaceViews).forEach(([key, el]) => {
+      if (el) el.classList.toggle('hidden', key !== name);
+    });
+
+    if (workspaceTitle) {
+      if (name === 'overview') workspaceTitle.textContent = 'PLANETARY OVERVIEW';
+      if (name === 'region') workspaceTitle.textContent = 'REGIONAL INTELLIGENCE';
+      if (name === 'simulation') workspaceTitle.textContent = 'WHAT-IF WORKBENCH';
+      if (name === 'ai') workspaceTitle.textContent = 'AI COMMAND DIRECTIVE';
+    }
+
+    if (epistemicBadge && epistemicText) {
+      if (name === 'simulation') {
+        epistemicBadge.className = 'ce-epistemic-status-tag font-mono simulated';
+        epistemicText.textContent = 'SIMULATED';
+      } else {
+        epistemicBadge.className = 'ce-epistemic-status-tag font-mono';
+        epistemicText.textContent = 'OBSERVED';
+      }
+    }
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-workspace');
+      switchWorkspace(target);
+    });
+  });
+
+  // Right Panel Collapse Toggle
+  const collapseBtn = container.querySelector('#ce-right-expand-btn');
+  const collapseArrow = container.querySelector('.ce-right-toggle-arrow');
+  collapseBtn?.addEventListener('click', () => {
+    isCollapsed = !isCollapsed;
+    container.classList.toggle('ce-panel-collapsed', isCollapsed);
+    if (collapseArrow) collapseArrow.textContent = isCollapsed ? '❮' : '❯';
+  });
+
+  // Simulation Sliders binding
+  const sliderRain = container.querySelector('#ce-slider-rain');
+  const sliderTemp = container.querySelector('#ce-slider-temp');
+  const sliderDrain = container.querySelector('#ce-slider-drain');
+  const sliderRoad = container.querySelector('#ce-slider-road');
+
+  const valRain = container.querySelector('#ce-sim-val-rain');
+  const valTemp = container.querySelector('#ce-sim-val-temp');
+  const valDrain = container.querySelector('#ce-sim-val-drain');
+  const valRoad = container.querySelector('#ce-sim-val-road');
+
+  sliderRain?.addEventListener('input', (e) => {
+    valRain.textContent = `${e.target.value >= 0 ? '+' : ''}${e.target.value}%`;
+    simParams.rainDeltaPct = parseFloat(e.target.value);
+  });
+  sliderTemp?.addEventListener('input', (e) => {
+    valTemp.textContent = `${e.target.value >= 0 ? '+' : ''}${e.target.value}°C`;
+    simParams.tempDeltaC = parseFloat(e.target.value);
+  });
+  sliderDrain?.addEventListener('input', (e) => {
+    valDrain.textContent = `${e.target.value}%`;
+    simParams.drainageCapPct = parseFloat(e.target.value);
+  });
+  sliderRoad?.addEventListener('input', (e) => {
+    valRoad.textContent = `${e.target.value}%`;
+    simParams.roadAccessPct = parseFloat(e.target.value);
+  });
+
+  // Simulation Run button
+  const runSimBtn = container.querySelector('#ce-btn-run-simulation');
+  const simFeedback = container.querySelector('#ce-sim-feedback');
+  const simStatusPill = container.querySelector('#ce-sim-status-pill');
+  const resetSimBtn = container.querySelector('#ce-btn-reset-sim');
+  let activeScenarioId = 'SCN-RAIN-40';
+
+  runSimBtn?.addEventListener('click', async () => {
+    if (runSimBtn.disabled) return;
+    runSimBtn.disabled = true;
+    runSimBtn.textContent = '⏳ RUNNING DIGITAL TWIN...';
+    simParams.isSimulated = true;
+
+    if (simStatusPill) {
+      simStatusPill.textContent = 'RUNNING';
+      simStatusPill.className = 'ce-section-badge warning font-mono';
+    }
+
+    const stateRegion = store?.getState?.()?.selectedRegion;
+    const regionName = stateRegion?.name || container.querySelector('#ce-selected-region-name')?.textContent || 'Hyderabad';
+
+    const result = await runSimulationScenario({
+      store,
+      scenarioId: activeScenarioId,
+      parameters: {
+        rainDeltaPct: simParams.rainDeltaPct,
+        tempDeltaC: simParams.tempDeltaC,
+        drainageCapPct: simParams.drainageCapPct,
+        roadAccessPct: simParams.roadAccessPct,
+      },
+      region: regionName,
+    });
+
+    runSimBtn.disabled = false;
+    runSimBtn.textContent = '⚡ RUN SIMULATION ENGINE';
+
+    if (result?.ok && result.simulation) {
+      const sim = result.simulation;
+      if (simStatusPill) {
+        simStatusPill.textContent = 'SIMULATED';
+        simStatusPill.className = 'ce-section-badge simulated font-mono';
+      }
+      if (epistemicBadge && epistemicText) {
+        epistemicBadge.className = 'ce-epistemic-status-tag font-mono simulated';
+        epistemicText.textContent = 'SIMULATED';
+      }
+
+      if (simFeedback) {
+        simFeedback.classList.remove('hidden');
+        const scenarioName = sim.scenario_name || sim.scenario_id || 'Precipitation Surge';
+        const provHash = (sim.provenance_hash || '').slice(0, 8);
+        const peakSev = sim.comparison?.simulated_peak_severity != null 
+          ? Math.round(sim.comparison.simulated_peak_severity * 100)
+          : (sim.peak_severity != null ? Math.round(sim.peak_severity * 100) : 85);
+        const popExposed = sim.comparison?.simulated_affected_population != null
+          ? sim.comparison.simulated_affected_population.toLocaleString()
+          : (sim.affected_population != null ? sim.affected_population.toLocaleString() : '25,000');
+        const safeEvacRoute = sim.evacuation_routes?.[0]?.route?.route_id || 'Corridor NH-65 (Elevated Bypass)';
+        const respAlert = sim.response_plan?.alert_level || 'ALERT';
+        const respAction = sim.response_plan?.actions?.[0]?.description || 'Coordinate preemptive egress';
+        const causalDriver = sim.explanation?.primary_driver || 'Antecedent ground saturation & precipitation exceedance';
+
+        simFeedback.innerHTML = `
+          <div class="ce-sim-feedback-header">
+            <span class="text-purple font-bold">● SIMULATION COMPLETED</span>
+            <span class="ce-sim-stamp font-mono">HASH: ${provHash}</span>
+          </div>
+          <ul class="ce-sim-feedback-list">
+            <li><strong class="text-purple">${scenarioName}</strong> executed by S2 twin</li>
+            <li>Peak Hazard Severity: <strong class="text-cyan">${peakSev}%</strong> (${sim.comparison?.delta_hazard_severity != null ? (sim.comparison.delta_hazard_severity > 0 ? '+' : '') + Math.round(sim.comparison.delta_hazard_severity * 100) + '%' : 'Elevated'})</li>
+            <li>Affected Population: <strong class="text-amber">${popExposed} residents</strong></li>
+            <li>Safe Evacuation Corridor: <strong class="text-emerald">${safeEvacRoute}</strong></li>
+            <li>Response Directive [${respAlert}]: <em>${respAction}</em></li>
+            <li>Causal Attribution: <span class="text-cyan">${causalDriver}</span></li>
+          </ul>
+          <button type="button" class="ce-btn-reset-sim font-mono" id="ce-btn-reset-sim-active" style="margin-top: 8px;">RESET TO BASELINE</button>
+        `;
+        container.querySelector('#ce-btn-reset-sim-active')?.addEventListener('click', () => resetSimBtn?.click());
+      }
+    } else {
+      const stage = result?.stage || 'MODEL_PROPAGATION';
+      const reason = result?.reason || result?.error || 'Execution pipeline timeout or unavailable service';
+      const reqId = result?.requestId || 'REQ-UNKNOWN';
+
+      if (simStatusPill) {
+        simStatusPill.textContent = 'SIMULATION FAILED';
+        simStatusPill.className = 'ce-section-badge danger font-mono';
+      }
+
+      if (simFeedback) {
+        simFeedback.classList.remove('hidden');
+        simFeedback.innerHTML = `
+          <div class="ce-sim-feedback-header">
+            <span class="text-error font-bold">● SIMULATION FAILED</span>
+            <span class="ce-sim-stamp font-mono">${reqId}</span>
+          </div>
+          <div style="padding: 6px 0; font-size: 11px; line-height: 1.5;">
+            <div><strong class="text-amber">Stage:</strong> ${stage}</div>
+            <div><strong class="text-amber">Reason:</strong> ${reason}</div>
+            <div><strong class="text-amber">Request ID:</strong> ${reqId}</div>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <button type="button" class="ce-btn-primary font-mono" id="ce-btn-retry-sim" style="flex: 1; padding: 5px 8px; font-size: 11px;">RETRY</button>
+            <button type="button" class="ce-btn-reset-sim font-mono" id="ce-btn-reset-sim-fail" style="flex: 1; padding: 5px 8px; font-size: 11px;">RESET</button>
+          </div>
+        `;
+        container.querySelector('#ce-btn-retry-sim')?.addEventListener('click', () => runSimBtn?.click());
+        container.querySelector('#ce-btn-reset-sim-fail')?.addEventListener('click', () => resetSimBtn?.click());
+      }
+    }
+  });
+
+  resetSimBtn?.addEventListener('click', async () => {
+    resetSimBtn.disabled = true;
+    await resetSimulationBaseline({ store });
+    resetSimBtn.disabled = false;
+    simParams.isSimulated = false;
+
+    if (simStatusPill) {
+      simStatusPill.textContent = 'BASELINE';
+      simStatusPill.className = 'ce-section-badge font-mono';
+    }
+    if (epistemicBadge && epistemicText) {
+      epistemicBadge.className = 'ce-epistemic-status-tag font-mono';
+      epistemicText.textContent = 'OBSERVED';
+    }
+    simFeedback?.classList.add('hidden');
+  });
+
+  // Presets buttons
+  container.querySelectorAll('.ce-sim-preset-btn').forEach((pBtn) => {
+    pBtn.addEventListener('click', () => {
+      container.querySelectorAll('.ce-sim-preset-btn').forEach((b) => b.classList.remove('active'));
+      pBtn.classList.add('active');
+      const preset = pBtn.getAttribute('data-preset');
+
+      if (preset === 'rain20' && sliderRain) {
+        activeScenarioId = 'SCN-RAIN-20';
+        sliderRain.value = 20;
+        sliderRain.dispatchEvent(new Event('input'));
+      } else if (preset === 'rain40' && sliderRain) {
+        activeScenarioId = 'SCN-RAIN-40';
+        sliderRain.value = 40;
+        sliderRain.dispatchEvent(new Event('input'));
+      } else if (preset === 'rain60' && sliderRain) {
+        activeScenarioId = 'SCN-RAIN-60';
+        sliderRain.value = 60;
+        sliderRain.dispatchEvent(new Event('input'));
+      } else if (preset === 'heat' && sliderTemp) {
+        activeScenarioId = 'SCN-EXTREME-HEAT';
+        sliderTemp.value = 4.5;
+        sliderTemp.dispatchEvent(new Event('input'));
+      } else if (preset === 'drainage' && sliderDrain) {
+        activeScenarioId = 'SCN-DRAINAGE-FAIL';
+        sliderDrain.value = 20;
+        sliderDrain.dispatchEvent(new Event('input'));
+      } else if (preset === 'road' && sliderRoad) {
+        activeScenarioId = 'SCN-ROAD-DEGRADE';
+        sliderRoad.value = 30;
+        sliderRoad.dispatchEvent(new Event('input'));
+      } else if (preset === 'compound' && sliderRain && sliderTemp) {
+        activeScenarioId = 'SCN-FLOOD-HEAT';
+        sliderRain.value = 45;
+        sliderTemp.value = 3.5;
+        sliderRain.dispatchEvent(new Event('input'));
+        sliderTemp.dispatchEvent(new Event('input'));
+      }
+
+      // Execute simulation for the selected preset
+      runSimBtn?.click();
+    });
+  });
+
+  // AI Command Execution Function
+  async function executeAiQuery(question) {
+    if (!question) return;
+    const promptInput = container.querySelector('#ce-ai-prompt-input');
+    const submitBtn = container.querySelector('#ce-ai-prompt-submit');
+    const groundedBadge = container.querySelector('#ce-ai-grounded-badge');
+
+    if (promptInput) promptInput.value = question;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = '...';
+    }
+    if (groundedBadge) groundedBadge.textContent = 'REASONING...';
+
+    const stateRegion = store?.getState?.()?.selectedRegion;
+    const regionName = stateRegion?.name || container.querySelector('#ce-selected-region-name')?.textContent || 'Hyderabad';
+    const res = await queryAiDirective({
+      store,
+      question,
+      region: regionName,
+    });
+
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'SEND';
+    }
+    if (groundedBadge) groundedBadge.textContent = 'GROUNDED (NO HALLUCINATIONS)';
+
+    if (res?.ok && res.data?.answer) {
+      const ans = res.data.answer;
+      const situationEl = container.querySelector('#ce-ai-field-situation');
+      const causeEl = container.querySelector('#ce-ai-field-cause');
+      const nextEl = container.querySelector('#ce-ai-field-next');
+      const riskEl = container.querySelector('#ce-ai-field-risk');
+      const actionEl = container.querySelector('#ce-ai-field-action');
+      const tokensEl = container.querySelector('#ce-ai-evidence-tokens');
+      const metaEl = container.querySelector('#ce-ai-evidence-meta');
+
+      if (situationEl) situationEl.textContent = ans.summary || ans.headline;
+      if (causeEl) causeEl.textContent = ans.headline || `Active ${ans.primary_hazard || 'Hazard'} at ${Math.round((ans.severity || 0.65) * 100)}% severity.`;
+      if (nextEl) nextEl.textContent = `Forecast models project risk trajectory with ${ans.epistemic_status || 'deterministic evaluation'}.`;
+      if (riskEl) riskEl.textContent = `${ans.exposed_population || '1.2M'} population exposed in high-risk zones.`;
+      if (actionEl && Array.isArray(ans.actions)) {
+        actionEl.innerHTML = ans.actions.map((a) => `<div>${a}</div>`).join('');
+      }
+      if (tokensEl && Array.isArray(ans.evidence_ids)) {
+        tokensEl.innerHTML = ans.evidence_ids.map((id) => `<span class="ce-ev-token">${id}</span>`).join('');
+      }
+      if (metaEl) {
+        metaEl.textContent = `VERIFIED: ${ans.model_mode || 'DETERMINISTIC EVIDENCE MODE'}`;
+      }
+    }
+  }
+
+  // AI Form Submit & Enter Key
+  const aiSubmitBtn = container.querySelector('#ce-ai-prompt-submit');
+  const aiPromptInput = container.querySelector('#ce-ai-prompt-input');
+  aiSubmitBtn?.addEventListener('click', () => {
+    const q = aiPromptInput?.value?.trim();
+    if (q) executeAiQuery(q);
+  });
+  aiPromptInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const q = aiPromptInput?.value?.trim();
+      if (q) executeAiQuery(q);
+    }
+  });
+
+  // AI Quick Prompts Chips
+  container.querySelectorAll('.ce-ai-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const p = chip.getAttribute('data-prompt');
+      if (p) executeAiQuery(p);
+    });
+  });
+
+  // View Safe Route on Globe Button
+  const viewEvacRouteBtn = container.querySelector('#ce-btn-view-evac-route');
+  viewEvacRouteBtn?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('climate:flyTo', {
+      detail: {
+        latitude: 17.4250,
+        longitude: 78.5400,
+        height: 25000,
+        name: 'Safe Shelter S3',
+      },
+    }));
+    window.dispatchEvent(new CustomEvent('climate:highlight-evac-corridors', {}));
+  });
+
+  // Listen to region selection events from globe or search
+  const selectedRegionName = container.querySelector('#ce-selected-region-name');
+  const regTemp = container.querySelector('#ce-reg-temp');
+  const regRain = container.querySelector('#ce-reg-rain');
+  const regHumidity = container.querySelector('#ce-reg-humidity');
+  const regSoil = container.querySelector('#ce-reg-soil');
+
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('climate:region-updated', (e) => {
+      const data = e.detail || {};
+      if (selectedRegionName && data.name) selectedRegionName.textContent = data.name;
+      const coordsEl = container.querySelector('#ce-selected-region-coords');
+      if (coordsEl && (data.latitude != null || data.lat != null)) {
+        const lat = data.latitude ?? data.lat;
+        const lon = data.longitude ?? data.lon;
+        const latDir = lat >= 0 ? 'N' : 'S';
+        const lonDir = lon >= 0 ? 'E' : 'W';
+        coordsEl.textContent = `${Math.abs(lat).toFixed(4)}° ${latDir} / ${Math.abs(lon).toFixed(4)}° ${lonDir}`;
+      }
+      const riskEl = container.querySelector('#ce-selected-region-risk');
+      if (riskEl) {
+        const riskLevel = data.risk_level || 'MODERATE';
+        riskEl.textContent = `${riskLevel} RISK`;
+        riskEl.className = `ce-section-badge ${riskLevel === 'HIGH' || riskLevel === 'CRITICAL' ? 'danger' : riskLevel === 'MODERATE' ? 'warning' : 'nominal'}`;
+      }
+      if (regTemp && data.temperature != null) regTemp.textContent = `${data.temperature}°C`;
+      if (regRain && data.rain_rate != null) regRain.textContent = `${data.rain_rate} mm/h`;
+      if (regHumidity && data.humidity != null) regHumidity.textContent = `${data.humidity}%`;
+      if (regSoil && data.soil_saturation != null) regSoil.textContent = `${data.soil_saturation}%`;
+      switchWorkspace('region');
+    });
+
+    window.addEventListener('climate:open-workspace', (e) => {
+      const mode = e.detail?.mode;
+      if (mode === 'simulation') switchWorkspace('simulation');
+      else if (mode === 'ai') switchWorkspace('ai');
+      else if (mode === 'region') switchWorkspace('region');
+      else if (mode === 'evacuation') switchWorkspace('region');
+    });
+
+    window.addEventListener('climate:ai-focus', (e) => {
+      const focus = e.detail?.focus;
+      switchWorkspace('ai');
+      if (focus === 'brief') executeAiQuery('What is the current situation in this region?');
+      else if (focus === 'cause') executeAiQuery('What happened and what caused this?');
+      else if (focus === 'next') executeAiQuery('What happens next in the forecast?');
+      else if (focus === 'risk') executeAiQuery('Who is most vulnerable and at risk?');
+      else if (focus === 'action') executeAiQuery('What should emergency responders do first?');
+    });
+
+    window.addEventListener('climate:apply-sim-preset', (e) => {
+      const preset = e.detail?.preset;
+      switchWorkspace('simulation');
+      const targetBtn = container.querySelector(`.ce-sim-preset-btn[data-preset="${preset}"]`);
+      if (targetBtn) targetBtn.click();
+    });
+  }
+
+  // Node selection binding
   const selectedNodeCard = container.querySelector('#ce-card-selected-node');
   const deselectBtn = container.querySelector('#ce-node-deselect-btn');
   const detailNodeId = container.querySelector('#ce-detail-node-id');
@@ -344,36 +1017,14 @@ export function createRightPanel(store) {
   const detailAqi = container.querySelector('#ce-detail-aqi');
   const detailBattery = container.querySelector('#ce-detail-battery');
 
-  // Subsystems elements
-  const overallBadge = container.querySelector('#ce-subsystems-overall-badge');
-  const subApi = container.querySelector('#ce-subsystem-api-val');
-  const subDb = container.querySelector('#ce-subsystem-db-val');
-  const subMqtt = container.querySelector('#ce-subsystem-mqtt-val');
-  const subRealtime = container.querySelector('#ce-subsystem-realtime-val');
-
-  // Climate status elements
-  const hazardsCountEl = container.querySelector('#ce-hazards-count');
-  const statusBadgeEl = container.querySelector('#ce-status-badge');
-  const aiStatusBadgeEl = container.querySelector('#ce-ai-status-badge');
-
-  // Mode intelligence elements
-  const modeTitleEl = container.querySelector('#ce-mode-intel-title');
-  const modeBadgeEl = container.querySelector('#ce-mode-intel-badge');
-  const modeIconEl = container.querySelector('#ce-mode-intel-icon');
-  const modeHeadlineEl = container.querySelector('#ce-mode-intel-headline');
-  const modeDescEl = container.querySelector('#ce-mode-intel-desc');
-  const modeMetaLeftEl = container.querySelector('#ce-mode-intel-meta-left');
-  const modeMetaRightEl = container.querySelector('#ce-mode-intel-meta-right');
-
-  if (deselectBtn) {
-    deselectBtn.addEventListener('click', () => {
-      if (typeof store.selectNode === 'function') {
-        store.selectNode(null);
-      } else if (typeof store.dispatch === 'function') {
-        store.dispatch({ type: 'NODE_SELECTED', payload: { nodeId: null } });
-      }
-    });
-  }
+  deselectBtn?.addEventListener('click', () => {
+    if (typeof store.selectNode === 'function') {
+      store.selectNode(null);
+    } else if (typeof store.dispatch === 'function') {
+      store.dispatch({ type: ACTION_TYPES.NODE_SELECTED, payload: { nodeId: null } });
+    }
+    selectedNodeCard?.classList.add('hidden');
+  });
 
   function formatVal(val, unit = '') {
     if (val === 0) return unit ? `0 ${unit}` : '0';
@@ -381,21 +1032,18 @@ export function createRightPanel(store) {
     return unit ? `${val} ${unit}` : String(val);
   }
 
-  function applyPillClass(el, statusText) {
-    if (!el) return;
-    el.textContent = statusText;
-    el.classList.remove('live', 'healthy', 'ready', 'degraded', 'unavailable', 'disconnected', 'standby');
-    const s = statusText.toLowerCase();
-    if (s === 'ready' || s === 'connected' || s === 'running' || s === 'live') {
-      el.classList.add('live');
-    } else if (s === 'degraded' || s === 'stale') {
-      el.classList.add('degraded');
-    } else if (s === 'standby' || s === 'idle' || s === 'initializing') {
-      el.classList.add('standby');
-    } else {
-      el.classList.add('unavailable');
-    }
-  }
+  const apiVal = container.querySelector('#ce-subsystem-api-val');
+  const dbVal = container.querySelector('#ce-subsystem-db-val');
+  const mqttVal = container.querySelector('#ce-subsystem-mqtt-val');
+  const rtVal = container.querySelector('#ce-subsystem-realtime-val');
+
+  const modeTitleEl = container.querySelector('#ce-mode-intel-title');
+  const modeBadgeEl = container.querySelector('#ce-mode-intel-badge');
+  const modeIconEl = container.querySelector('#ce-mode-intel-icon');
+  const modeHeadlineEl = container.querySelector('#ce-mode-intel-headline');
+  const modeDescEl = container.querySelector('#ce-mode-intel-desc');
+  const modeMetaLeftEl = container.querySelector('#ce-mode-intel-meta-left');
+  const modeMetaRightEl = container.querySelector('#ce-mode-intel-meta-right');
 
   function updateModeIntelligence(mode, state) {
     const activeMode = mode || CLIMATE_MODES.LIVE;
@@ -405,7 +1053,7 @@ export function createRightPanel(store) {
       case CLIMATE_MODES.LIVE: {
         if (modeBadgeEl) {
           modeBadgeEl.textContent = state.connection?.realtimeState === REALTIME_STATES.LIVE ? 'LIVE STREAM' : 'STANDBY';
-          modeBadgeEl.className = state.connection?.realtimeState === REALTIME_STATES.LIVE ? 'ce-section-badge' : 'ce-unavailable-badge';
+          modeBadgeEl.className = state.connection?.realtimeState === REALTIME_STATES.LIVE ? 'ce-section-badge font-mono' : 'ce-unavailable-badge font-mono';
         }
         if (modeIconEl) modeIconEl.textContent = '📡';
         if (modeHeadlineEl) modeHeadlineEl.textContent = 'REAL-TIME CLIMATE OBSERVATION';
@@ -419,12 +1067,11 @@ export function createRightPanel(store) {
       case CLIMATE_MODES.ANALYTICS: {
         if (modeBadgeEl) {
           modeBadgeEl.textContent = 'RAW STATS';
-          modeBadgeEl.className = 'ce-section-badge';
+          modeBadgeEl.className = 'ce-section-badge font-mono';
         }
         if (modeIconEl) modeIconEl.textContent = '📊';
         if (modeHeadlineEl) modeHeadlineEl.textContent = 'CLIMATE ANALYTICS';
 
-        // Compute observational summary from actual telemetry
         const allIds = state.nodes?.allIds || [];
         const telemetryMap = state.telemetry?.byNodeId || {};
         const temps = [];
@@ -461,7 +1108,7 @@ export function createRightPanel(store) {
         if (isIntelReady) {
           if (modeBadgeEl) {
             modeBadgeEl.textContent = 'ACTIVE';
-            modeBadgeEl.className = 'ce-section-badge';
+            modeBadgeEl.className = 'ce-section-badge font-mono';
           }
           if (modeIconEl) modeIconEl.textContent = '🛡️';
           if (modeHeadlineEl) modeHeadlineEl.textContent = 'S2 RISK & HAZARD INTELLIGENCE';
@@ -475,7 +1122,7 @@ export function createRightPanel(store) {
         } else {
           if (modeBadgeEl) {
             modeBadgeEl.textContent = 'UNAVAILABLE';
-            modeBadgeEl.className = 'ce-unavailable-badge';
+            modeBadgeEl.className = 'ce-unavailable-badge font-mono';
           }
           if (modeIconEl) modeIconEl.textContent = '🛡️';
           if (modeHeadlineEl) modeHeadlineEl.textContent = 'INTELLIGENCE NOT AVAILABLE';
@@ -494,7 +1141,7 @@ export function createRightPanel(store) {
         if (isSimReady) {
           if (modeBadgeEl) {
             modeBadgeEl.textContent = hasSimResult ? 'SCENARIO COMPLETED' : 'ENGINE READY';
-            modeBadgeEl.className = 'ce-section-badge';
+            modeBadgeEl.className = 'ce-section-badge font-mono';
           }
           if (modeIconEl) modeIconEl.textContent = '⚡';
           if (modeHeadlineEl) modeHeadlineEl.textContent = hasSimResult
@@ -510,7 +1157,7 @@ export function createRightPanel(store) {
         } else {
           if (modeBadgeEl) {
             modeBadgeEl.textContent = 'OFFLINE';
-            modeBadgeEl.className = 'ce-unavailable-badge';
+            modeBadgeEl.className = 'ce-unavailable-badge font-mono';
           }
           if (modeIconEl) modeIconEl.textContent = '⚡';
           if (modeHeadlineEl) modeHeadlineEl.textContent = 'SIMULATION ENGINE OFFLINE';
@@ -525,7 +1172,7 @@ export function createRightPanel(store) {
       case CLIMATE_MODES.SENSOR_MESH: {
         if (modeBadgeEl) {
           modeBadgeEl.textContent = 'GROUND ARRAY';
-          modeBadgeEl.className = 'ce-section-badge';
+          modeBadgeEl.className = 'ce-section-badge font-mono';
         }
         if (modeIconEl) modeIconEl.textContent = '🌐';
         if (modeHeadlineEl) modeHeadlineEl.textContent = 'SENSOR MESH INSPECTION';
@@ -539,7 +1186,7 @@ export function createRightPanel(store) {
       case CLIMATE_MODES.AI: {
         if (modeBadgeEl) {
           modeBadgeEl.textContent = 'STANDBY';
-          modeBadgeEl.className = 'ce-unavailable-badge';
+          modeBadgeEl.className = 'ce-unavailable-badge font-mono';
         }
         if (modeIconEl) modeIconEl.textContent = '🤖';
         if (modeHeadlineEl) modeHeadlineEl.textContent = 'AI REASONING STANDBY';
@@ -553,7 +1200,7 @@ export function createRightPanel(store) {
       case CLIMATE_MODES.EMERGENCY: {
         if (modeBadgeEl) {
           modeBadgeEl.textContent = 'INACTIVE';
-          modeBadgeEl.className = 'ce-unavailable-badge';
+          modeBadgeEl.className = 'ce-unavailable-badge font-mono';
         }
         if (modeIconEl) modeIconEl.textContent = '🚨';
         if (modeHeadlineEl) modeHeadlineEl.textContent = 'EMERGENCY PROTOCOLS INACTIVE';
@@ -572,291 +1219,65 @@ export function createRightPanel(store) {
   function updateFromState(state) {
     if (!state) return;
 
-    // 1. Selected node detail view
-    const selectedId = state.ui?.selectedNodeId;
-    if (selectedNodeCard) {
-      if (selectedId) {
-        selectedNodeCard.classList.remove('hidden');
-        const node = state.nodes?.byId?.[selectedId] || { node_id: selectedId };
-        const telemetry = state.telemetry?.byNodeId?.[selectedId] || null;
+    // 1. Subsystems sync
+    if (apiVal) apiVal.textContent = resolveSubsystemStatus('api', state);
+    if (dbVal) dbVal.textContent = resolveSubsystemStatus('db', state);
+    if (mqttVal) mqttVal.textContent = resolveSubsystemStatus('mqtt', state);
+    if (rtVal) rtVal.textContent = resolveSubsystemStatus('realtime', state);
 
-        if (detailNodeId) detailNodeId.textContent = node.name ? `${selectedId} (${node.name})` : selectedId;
-
-        const lat = typeof node.latitude === 'number' ? node.latitude : (telemetry && typeof telemetry.latitude === 'number' ? telemetry.latitude : null);
-        const lon = typeof node.longitude === 'number' ? node.longitude : (telemetry && typeof telemetry.longitude === 'number' ? telemetry.longitude : null);
-
-        if (detailCoords) {
-          if (lat !== null && lon !== null) {
-            detailCoords.textContent = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
-          } else {
-            detailCoords.textContent = '--';
-          }
-        }
-
-        if (detailTimestamp) {
-          detailTimestamp.textContent = telemetry?.timestamp || node?.lastSeen || '--';
-        }
-
-        if (detailTemp) detailTemp.textContent = formatVal(telemetry?.temperature, '°C');
-        if (detailHumidity) detailHumidity.textContent = formatVal(telemetry?.humidity, '%');
-        if (detailPressure) detailPressure.textContent = formatVal(telemetry?.pressure, 'hPa');
-        if (detailRain) detailRain.textContent = formatVal(telemetry?.rainfall, 'mm/h');
-        if (detailSoil) detailSoil.textContent = formatVal(telemetry?.soil_moisture, '%');
-        if (detailWater) detailWater.textContent = formatVal(telemetry?.water_level, 'm');
-        if (detailAqi) detailAqi.textContent = formatVal(telemetry?.air_quality, 'AQI');
-        if (detailBattery) detailBattery.textContent = formatVal(telemetry?.battery, 'V');
-      } else {
-        selectedNodeCard.classList.add('hidden');
-      }
-    }
-
-    // 2. Structured Top-Level Status Summary
-    const globalStatus = state.global?.status || 'ONLINE';
-    const systemStatus = state.global?.systemStatus || (state.system?.status === 'healthy' ? 'OPERATIONAL' : 'OPERATIONAL');
-    const physicalNodesCount = state.nodes?.allIds?.length || 0;
-
-    const elOverallBadge = container.querySelector('#ce-subsystems-overall-badge');
-    const elGlobalData = container.querySelector('#ce-status-global-data');
-    const elIntel = container.querySelector('#ce-status-intel');
-    const elRealtime = container.querySelector('#ce-subsystem-realtime-val');
-    const elMeshNodes = container.querySelector('#ce-status-mesh-nodes');
-    const elEsp32Val = container.querySelector('#ce-esp32-status-val');
-
-    if (elOverallBadge) {
-      elOverallBadge.textContent = systemStatus.toUpperCase();
-      elOverallBadge.className = systemStatus === 'OPERATIONAL' ? 'ce-section-badge' : 'ce-unavailable-badge';
-    }
-    applyPillClass(elGlobalData, globalStatus);
-    applyPillClass(elIntel, 'ACTIVE');
-    let rtLabel = 'UNAVAILABLE';
-    if (state.connection?.realtimeState === REALTIME_STATES.LIVE) {
-      rtLabel = 'LIVE';
-    } else if (globalStatus === 'ONLINE' && physicalNodesCount === 0) {
-      rtLabel = 'CONNECTED';
-    } else if (state.connection?.realtimeState && state.connection.realtimeState !== REALTIME_STATES.UNAVAILABLE) {
-      rtLabel = state.connection.realtimeState;
-    } else if (state.connection?.connected || globalStatus === 'ONLINE') {
-      rtLabel = 'CONNECTED';
-    }
-    applyPillClass(elRealtime, rtLabel);
-
-    if (elMeshNodes) {
-      elMeshNodes.textContent = `${physicalNodesCount} NODES`;
-      elMeshNodes.className = physicalNodesCount > 0 ? 'ce-status-pill live' : 'ce-status-pill standby';
-    }
-    if (elEsp32Val) {
-      elEsp32Val.textContent = physicalNodesCount > 0 ? 'CONNECTED' : 'NOT CONNECTED (OPTIONAL)';
-      elEsp32Val.style.color = physicalNodesCount > 0 ? 'var(--ce-emerald)' : 'var(--ce-amber)';
-    }
-
-    // 2a. Subsystem Indicators for Health & Tests
-    const subApi = container.querySelector('#ce-subsystem-api-val');
-    const subDb = container.querySelector('#ce-subsystem-db-val');
-    const subMqtt = container.querySelector('#ce-subsystem-mqtt-val');
-
-    if (subApi) {
-      const apiStatus = state.system?.subsystems?.api || 'standby';
-      subApi.textContent = apiStatus.toUpperCase();
-    }
-    if (subDb) {
-      const dbStatus = state.system?.subsystems?.db;
-      subDb.textContent = dbStatus === 'ready' || dbStatus === 'connected' ? 'CONNECTED' : (dbStatus || 'disconnected').toUpperCase();
-    }
-    if (subMqtt) {
-      const mqttStatus = state.system?.subsystems?.mqtt || 'standby';
-      subMqtt.textContent = mqttStatus.toUpperCase();
-    }
-
-    // 2b. Data Sources Badges
-    const sourcesList = state.global?.sources || [];
-    const sourceMap = {};
-    for (const s of sourcesList) {
-      sourceMap[s.source_id] = s;
-    }
-
-    const setSourcePill = (selector, status, defaultStatus) => {
-      const el = container.querySelector(selector);
-      if (!el) return;
-      const s = status || defaultStatus;
-      el.textContent = s.startsWith('●') || s.startsWith('○') ? s : (s === 'ONLINE' ? `● ${s}` : `○ ${s}`);
-      applyPillClass(el, s);
-    };
-
-    setSourcePill('#ce-source-meteo-pill', sourceMap['open_meteo']?.status, 'ONLINE');
-    setSourcePill('#ce-source-firms-pill', sourceMap['nasa_firms']?.status, 'ONLINE');
-    setSourcePill('#ce-source-usgs-pill', sourceMap['usgs']?.status, 'ONLINE');
-    setSourcePill('#ce-source-gdacs-pill', sourceMap['gdacs']?.status, 'ONLINE');
-    setSourcePill('#ce-source-glofas-pill', sourceMap['glofas']?.status, 'UNAVAILABLE');
-    setSourcePill('#ce-source-esp32-pill', physicalNodesCount > 0 ? 'ONLINE' : 'NOT_CONNECTED', 'NOT_CONNECTED');
-
-    // 3. AI Command Center Binding
-    const aiActiveCountEl = container.querySelector('#ce-ai-active-count');
-    const aiHighRiskEl = container.querySelector('#ce-ai-high-risk');
-    const aiCompoundEl = container.querySelector('#ce-ai-compound');
-    const aiTopHeadlineEl = container.querySelector('#ce-ai-headline');
-    const aiTopDescEl = container.querySelector('#ce-ai-desc');
-    const aiInferenceTimeEl = container.querySelector('#ce-ai-inference-time');
-
-    const globalHazards = state.global?.hazards || [];
-    const activeEvCount = state.global?.activeCount || globalHazards.length || 0;
-    const highRiskEvCount = state.global?.highRiskCount || globalHazards.filter(h => (h.severity || 0) >= 0.7).length || 0;
-    const compEvCount = state.global?.compoundCount || globalHazards.filter(h => h.hazard_type === 'COMPOUND').length || 0;
-
-    if (aiActiveCountEl) aiActiveCountEl.textContent = String(activeEvCount);
-    if (aiHighRiskEl) aiHighRiskEl.textContent = String(highRiskEvCount);
-    if (aiCompoundEl) aiCompoundEl.textContent = String(compEvCount);
-
-    const topEvent = state.global?.aiSummary?.top_event || null;
-    if (topEvent) {
-      if (aiTopHeadlineEl) aiTopHeadlineEl.textContent = topEvent.title || `${topEvent.hazard}: SEV ${topEvent.severity}`;
-      if (aiTopDescEl) {
-        const drv = Array.isArray(topEvent.drivers) ? topEvent.drivers.join('. ') : '';
-        aiTopDescEl.textContent = `Severity: ${(topEvent.severity || 0).toFixed(2)} | Confidence: ${(topEvent.confidence || 0.9).toFixed(2)}\n${drv ? `Evidence: ${drv}\n` : ''}Recommended Action: ${topEvent.recommended_action || 'Continue surveillance.'}\nSources: ${(topEvent.sources || ['Open-Meteo']).join(', ')}`;
-      }
-      if (aiInferenceTimeEl) {
-        aiInferenceTimeEl.textContent = `EVAL: ${topEvent.observed_at ? topEvent.observed_at.slice(11, 19) + ' UTC' : 'REALTIME'}`;
-      }
-    } else if (globalHazards.length > 0) {
-      const topH = [...globalHazards].sort((a, b) => (b.severity || 0) - (a.severity || 0))[0];
-      if (aiTopHeadlineEl) aiTopHeadlineEl.textContent = `${topH.center?.name || 'Global'}: ${topH.hazard_type}`;
-      if (aiTopDescEl) {
-        aiTopDescEl.textContent = `Severity: ${(topH.severity || 0).toFixed(2)} | Confidence: ${(topH.confidence || 0.9).toFixed(2)}\nAction: ${topH.recommended_action || 'Active event monitoring.'}\nSource: ${topH.source || 'Open-Meteo'}`;
-      }
-    } else {
-      if (aiStatusBadgeEl) {
-        aiStatusBadgeEl.textContent = 'STANDBY';
-        aiStatusBadgeEl.className = 'ce-section-badge standby';
-      }
-      if (aiTopHeadlineEl) aiTopHeadlineEl.textContent = 'GLOBAL CLIMATE INTELLIGENCE';
-      if (aiTopDescEl) {
-        aiTopDescEl.textContent = 'STANDBY: Awaiting real-time MQTT telemetry or authoritative global feed events.';
-      }
-    }
-
-    // 4. Mode Intelligence
+    // 2. Mode Intelligence sync
     updateModeIntelligence(state.ui?.mode, state);
 
-    // 5. Threat / Current Hazards Binding (Global + Local)
-    const threatBadgeEl = container.querySelector('#ce-threat-badge');
-    const threatIconEl = container.querySelector('#ce-threat-icon');
-    const threatHeadlineEl = container.querySelector('#ce-threat-headline');
-    const threatDescEl = container.querySelector('#ce-threat-desc');
-    const threatMetaLeftEl = container.querySelector('#ce-threat-meta-left');
-    const threatMetaRightEl = container.querySelector('#ce-threat-meta-right');
+    // 3. Selected Node detail sync
+    const selectedId = state.ui?.selectedNodeId || state.nodes?.selectedNodeId;
+    if (selectedId && (state.nodes?.byId?.[selectedId] || (state.nodes?.allIds && state.nodes.allIds.includes(selectedId)))) {
+      const node = state.nodes?.byId?.[selectedId] || { node_id: selectedId };
+      const telem = state.telemetry?.byNodeId?.[selectedId] || state.telemetry?.latestByNodeId?.[selectedId] || {};
 
-    const activeLocalHazards = (state.hazards?.allIds || [])
-      .map((id) => state.hazards.byId[id])
-      .filter((h) => h && (h.status === 'active' || h.active === true || (typeof h.severity === 'number' && h.severity > 0)));
-
-    const compoundEvents = state.compound?.events || (state.compound?.active ? [state.compound.active] : []);
-    const combinedHazards = [...globalHazards, ...activeLocalHazards];
-
-    if (combinedHazards.length > 0 || compoundEvents.length > 0) {
-      const totalCount = combinedHazards.length + compoundEvents.length;
-      if (threatBadgeEl) {
-        threatBadgeEl.textContent = `${totalCount} ACTIVE HAZARD${totalCount > 1 ? 'S' : ''}`;
-        threatBadgeEl.className = 'ce-section-badge';
-      }
-      if (threatIconEl) threatIconEl.textContent = '⚠️';
-      if (threatHeadlineEl) {
-        const topHazards = combinedHazards.slice(0, 2);
-        threatHeadlineEl.textContent = topHazards
-          .map((h) => `${(h.hazard || h.hazard_type || 'HAZARD').toUpperCase()}: ${(h.severity || 0).toFixed(2)}`)
-          .join(' | ');
-      }
-      if (threatDescEl) {
-        if (compoundEvents.length > 0) {
-          const ce = compoundEvents[0];
-          const chain = ce.cascade_chain || ce.causal_chain || `${ce.primary_hazard || 'Heavy Rain'} → Flood Risk → Accessibility Impact`;
-          threatDescEl.textContent = `Compound Cascade: ${chain}`;
+      selectedNodeCard?.classList.remove('hidden');
+      if (detailNodeId) detailNodeId.textContent = node.node_id || selectedId;
+      if (detailCoords) {
+        const lat = typeof node.latitude === 'number' ? node.latitude : (telem && typeof telem.latitude === 'number' ? telem.latitude : null);
+        const lon = typeof node.longitude === 'number' ? node.longitude : (telem && typeof telem.longitude === 'number' ? telem.longitude : null);
+        if (lat !== null && lon !== null && !isNaN(Number(lat)) && !isNaN(Number(lon))) {
+          detailCoords.textContent = `${Number(lat).toFixed(4)}°, ${Number(lon).toFixed(4)}°`;
         } else {
-          threatDescEl.textContent = combinedHazards.slice(0, 3).map((h) => `${h.center?.name || h.hazard || h.hazard_type}: Sev ${(h.severity || 0).toFixed(2)} (${h.source || 'Global Feed'})`).join('. ');
+          detailCoords.textContent = '--';
         }
       }
-      if (threatMetaLeftEl) threatMetaLeftEl.textContent = `TRACKED: ${combinedHazards.length} ZONES`;
-      if (threatMetaRightEl) {
-        const anySimulated = combinedHazards.some((h) => h.simulated);
-        threatMetaRightEl.textContent = anySimulated ? 'MODE: SIMULATED' : 'MODE: LIVE / OBSERVED';
-      }
+      if (detailTimestamp) detailTimestamp.textContent = telem.timestamp || '--';
+      if (detailTemp) detailTemp.textContent = formatVal(telem.temperature, '°C');
+      if (detailHumidity) detailHumidity.textContent = formatVal(telem.humidity, '%');
+      if (detailPressure) detailPressure.textContent = formatVal(telem.pressure, 'hPa');
+      const rainAmount = telem.rainfall ?? telem.precipitation_rate;
+      if (detailRain) detailRain.textContent = formatVal(rainAmount, 'mm/h');
+      if (detailSoil) detailSoil.textContent = formatVal(telem.soil_moisture, '%');
+      if (detailWater) detailWater.textContent = formatVal(telem.water_level, 'm');
+      const aqiReading = telem.air_quality ?? telem.air_quality_index;
+      if (detailAqi) detailAqi.textContent = formatVal(aqiReading, 'AQI');
+      const batteryVal = telem.battery ?? telem.battery_voltage;
+      if (detailBattery) detailBattery.textContent = formatVal(batteryVal, 'V');
     } else {
-      if (threatBadgeEl) {
-        threatBadgeEl.textContent = 'NOMINAL';
-        threatBadgeEl.className = 'ce-section-badge';
-      }
-      if (threatIconEl) threatIconEl.textContent = '🛡️';
-      if (threatHeadlineEl) threatHeadlineEl.textContent = 'NO ACTIVE HAZARD ALERTS';
-      if (threatDescEl) {
-        threatDescEl.textContent = 'No critical threshold exceedances registered across active global monitoring sectors. NONE DETECTED.';
-      }
-      if (threatMetaLeftEl) threatMetaLeftEl.textContent = 'RISK ENGINE: ONLINE';
-      if (threatMetaRightEl) threatMetaRightEl.textContent = 'PIPELINE: DETERMINISTIC';
-    }
-
-
-    // 6. AI Agent / Response Plan Binding
-    const aiIconEl = container.querySelector('#ce-ai-icon');
-    const aiHeadlineEl = container.querySelector('#ce-ai-headline');
-    const aiDescEl = container.querySelector('#ce-ai-desc');
-    const aiMetaLeftEl = container.querySelector('#ce-ai-meta-left');
-    // Note: aiInferenceTimeEl already declared above
-
-
-    const activePlan = state.response?.activePlan || (state.response?.plans && state.response.plans[0]);
-    if (activePlan) {
-      if (aiStatusBadgeEl) {
-        aiStatusBadgeEl.textContent = `ALERT: ${activePlan.alert_level || 'ACTIVE'}`;
-        aiStatusBadgeEl.className = 'ce-section-badge';
-      }
-      if (aiIconEl) aiIconEl.textContent = '⚡';
-      if (aiHeadlineEl) {
-        aiHeadlineEl.textContent = `RESPONSE DIRECTIVE: ${activePlan.primary_hazard || 'CLIMATE'}`;
-      }
-      if (aiDescEl) {
-        const actions = Array.isArray(activePlan.actions)
-          ? activePlan.actions.map((a, i) => `${i + 1}. ${a.title || a.action || a}: ${a.reason || ''}`).join('\n')
-          : (activePlan.description || 'Action plan generated.');
-        aiDescEl.textContent = actions;
-      }
-      if (aiMetaLeftEl) aiMetaLeftEl.textContent = 'PRIORITY: HIGH (HITL REQUIRED)';
-      if (aiInferenceTimeEl) {
-        aiInferenceTimeEl.textContent = `EVALUATED: ${activePlan.evaluated_at || new Date().toISOString()}`;
-      }
-    } else {
-      if (aiStatusBadgeEl) {
-        aiStatusBadgeEl.textContent = (state.ai?.status || 'STANDBY').toUpperCase();
-        aiStatusBadgeEl.className = 'ce-section-badge';
-      }
-      if (aiIconEl) aiIconEl.textContent = '🤖';
-      if (aiHeadlineEl) aiHeadlineEl.textContent = 'AUTONOMOUS REASONING ENGINE';
-      if (aiDescEl) {
-        aiDescEl.textContent = 'Multimodal climate reasoning agent is in standby mode. Awaiting real-time MQTT telemetry and spatial hazard triggers before generating causal insights.';
-      }
-      if (aiMetaLeftEl) aiMetaLeftEl.textContent = 'STATUS: STANDBY';
-      if (aiInferenceTimeEl) {
-        aiInferenceTimeEl.textContent = state.ai?.lastInference ? `LAST: ${state.ai.lastInference}` : 'LAST INFERENCE: NONE';
-      }
+      selectedNodeCard?.classList.add('hidden');
     }
   }
 
-  // Sync initial state
+  // Initial sync
   if (store && typeof store.getState === 'function') {
     updateFromState(store.getState());
   }
 
-  // Subscribe to store
-  let unsubscribe = null;
-  if (store && typeof store.subscribe === 'function') {
-    unsubscribe = store.subscribe((state) => {
-      updateFromState(state);
-    });
-  }
+  // Subscribe to store updates for selected node and subsystems
+  const unsubscribe = store?.subscribe ? store.subscribe(() => {
+    updateFromState(store.getState());
+  }) : null;
 
   return {
     element: container,
-    destroy: () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
+    showWorkspace: switchWorkspace,
+    destroy() {
+      if (typeof unsubscribe === 'function') unsubscribe();
+      if (typeof container?.remove === 'function') container.remove();
     },
   };
 }

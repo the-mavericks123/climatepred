@@ -7,7 +7,7 @@
  */
 
 import { createClimateStore } from '../state/index.js';
-import { syncClimateStateFromRest } from '../api/index.js';
+import { syncClimateStateFromRest, syncGlobalDataFromRest } from '../api/index.js';
 import { startRealtimeBridge, stopRealtimeBridge } from '../realtime/index.js';
 import {
   initNodesLayer,
@@ -23,6 +23,8 @@ export { createTopNav } from './topNav.js';
 export { createLeftPanel } from './leftPanel.js';
 export { createSensorMeshPanel } from './sensorMeshPanel.js';
 export { createRightPanel, resolveSubsystemStatus } from './rightPanel.js';
+export { createBottomDrawer, DRAWER_TABS } from './bottomDrawer.js';
+export { createRegionFocusCard } from './regionFocusCard.js';
 export { createStatusBar, computeNodeFreshnessSummary } from './statusBar.js';
 export {
   initNodesLayer,
@@ -91,12 +93,18 @@ export function initClimateShell(options = {}) {
 
   // In F4.2 & S1-S2 Integration: trigger initial REST state & intelligence synchronization
   if (options.syncRest !== false) {
-    const doSync = () => syncClimateStateFromRest({
-      store,
-      client: options.client,
-      syncIntelligence: options.syncIntelligence !== false,
-      fetchTelemetry: true,
-    });
+    const doSync = async () => {
+      await syncClimateStateFromRest({
+        store,
+        client: options.client,
+        syncIntelligence: options.syncIntelligence !== false,
+        fetchTelemetry: true,
+      });
+      await syncGlobalDataFromRest({
+        store,
+        client: options.client,
+      }).catch(() => {});
+    };
 
     doSync().catch((err) => {
       console.warn('[ClimateEye] Initial REST sync warning:', err);

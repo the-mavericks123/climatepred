@@ -3902,6 +3902,14 @@ export class StyleManager {
       legacyTitleBar.style.display = 'none';
     }
 
+    // 8b. Permanently suppress legacy GEV left-panel-stack
+    const legacyLeftStack = document.getElementById('left-panel-stack');
+    if (legacyLeftStack) {
+      legacyLeftStack.hidden = true;
+      legacyLeftStack.style.display = 'none';
+      legacyLeftStack.setAttribute('aria-hidden', 'true');
+    }
+
     // 9. Mount Climate Eye command-center shell (Step F4.1)
     if (!this._climateShell && typeof document !== 'undefined') {
       try {

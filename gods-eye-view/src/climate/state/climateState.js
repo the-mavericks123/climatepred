@@ -56,6 +56,15 @@ export function createInitialState(overrides = {}) {
       selectedPredictionId: null,
       activeOverlays: [],
     },
+    selectedRegion: {
+      name: 'Hyderabad',
+      country: 'India',
+      latitude: 17.3850,
+      longitude: 78.4867,
+      selected: true,
+      data: null,
+      lastUpdated: null,
+    },
     nodes: {
       byId: {},
       allIds: [],
@@ -295,6 +304,19 @@ export function climateReducer(state = createInitialState(), action = {}) {
         ui: {
           ...state.ui,
           selectedNodeId: nodeId ? String(nodeId) : null,
+        },
+      };
+    }
+
+    case ACTION_TYPES.REGION_SELECTED: {
+      const region = action.payload || {};
+      return {
+        ...state,
+        selectedRegion: {
+          ...(state.selectedRegion || {}),
+          ...region,
+          selected: region.name ? true : (region.selected !== false),
+          lastUpdated: new Date().toISOString(),
         },
       };
     }
@@ -737,6 +759,11 @@ export function createClimateStore(initialOverrides = {}) {
 
     selectNode: (nodeId) =>
       dispatch({ type: ACTION_TYPES.NODE_SELECTED, payload: { nodeId } }),
+
+    selectRegion: (region) =>
+      dispatch({ type: ACTION_TYPES.REGION_SELECTED, payload: region }),
+
+    getSelectedRegion: () => getState().selectedRegion,
 
     updateNode: (node) =>
       dispatch({ type: ACTION_TYPES.NODE_UPDATED, payload: node }),

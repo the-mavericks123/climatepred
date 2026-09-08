@@ -378,6 +378,275 @@ export async function syncGlobalDataFromRest({
 }
 
 /**
+ * Executes an authoritative Digital Twin simulation scenario against S2 backend.
+ * Propagates results across hazards, predictions, compound, vulnerability, and evacuation.
+ *
+ * @param {object} options
+ * @param {object} options.store
+ * @param {object} [options.client]
+ * @param {string} [options.scenarioId='SCN-RAIN-40']
+ * @param {object} [options.parameters={}]
+ * @param {string|object} [options.region='Hyderabad']
+ * @returns {Promise<object>}
+ */
+export async function runSimulationScenario({
+  store,
+  client = createClimateApiClient(),
+  scenarioId = 'SCN-RAIN-40',
+  parameters = {},
+  region = 'Hyderabad',
+} = {}) {
+  if (!store || typeof store.dispatch !== 'function') {
+    throw new TypeError('runSimulationScenario requires an authoritative store instance');
+  }
+
+  // Mark simulation as running
+  store.dispatch({
+    type: ACTION_TYPES.SIMULATION_STATE_CHANGED,
+    payload: { running: true, currentRun: { scenarioId, parameters, startedAt: new Date().toISOString() } },
+  });
+
+  const rainMultiplier = parameters.rainfall_multiplier !== undefined
+    ? parameters.rainfall_multiplier
+    : (1.0 + (parameters.rainDeltaPct !== undefined ? parameters.rainDeltaPct : 40) / 100);
+
+  const tempDelta = parameters.temperature_delta !== undefined
+    ? parameters.temperature_delta
+    : (parameters.tempDeltaC !== undefined ? parameters.tempDeltaC : 2.0);
+
+  const drainageFailure = parameters.drainage_failure_severity !== undefined
+    ? parameters.drainage_failure_severity
+    : (parameters.drainageCapPct !== undefined ? Math.max(0, (100 - parameters.drainageCapPct) / 100) : 0.5);
+
+  const roadDegradation = parameters.road_accessibility_reduction !== undefined
+    ? parameters.road_accessibility_reduction
+    : (parameters.roadAccessPct !== undefined ? Math.max(0, (100 - parameters.roadAccessPct) / 100) : 0.5);
+
+  const payload = {
+    scenario_id: scenarioId,
+    base_state: 'current',
+    region: region,
+    changes: {
+      rainfall_multiplier: rainMultiplier,
+      temperature_delta: tempDelta,
+      drainage_failure_severity: drainageFailure,
+      road_accessibility_reduction: roadDegradation,
+    },
+  };
+
+  try {
+    const res = await client.runSimulation(payload);
+    if (res?.ok && res.data?.simulation) {
+      const sim = res.data.simulation;
+
+      // 1. Dispatch simulation completed
+      store.dispatch({
+        type: ACTION_TYPES.SIMULATION_COMPLETED,
+        payload: sim,
+      });
+
+      // 2. Propagate to hazards if present
+      if (Array.isArray(sim.hazards) && sim.hazards.length > 0) {
+        if (typeof store.updateHazards === 'function') {
+          store.updateHazards(sim.hazards);
+        } else {
+          store.dispatch({ type: ACTION_TYPES.HAZARDS_UPDATED, payload: sim.hazards });
+        }
+      }
+
+      // 3. Propagate to predictions if present
+      if (Array.isArray(sim.predictions) && sim.predictions.length > 0) {
+        if (typeof store.updatePredictions === 'function') {
+          store.updatePredictions(sim.predictions);
+        } else {
+          store.dispatch({ type: ACTION_TYPES.PREDICTIONS_UPDATED, payload: sim.predictions });
+        }
+      }
+
+      // 4. Propagate to compound cascade if present
+      if (Array.isArray(sim.compound_events) && sim.compound_events.length > 0) {
+        if (typeof store.updateCompound === 'function') {
+          store.updateCompound(sim.compound_events);
+        } else {
+          store.dispatch({ type: ACTION_TYPES.COMPOUND_UPDATED, payload: sim.compound_events });
+        }
+      }
+
+      // 5. Propagate to vulnerability zones if present
+      if (Array.isArray(sim.vulnerability_zones) && sim.vulnerability_zones.length > 0) {
+        if (typeof store.updateVulnerability === 'function') {
+          store.updateVulnerability(sim.vulnerability_zones);
+        } else {
+          store.dispatch({ type: ACTION_TYPES.VULNERABILITY_UPDATED, payload: sim.vulnerability_zones });
+        }
+      }
+
+      // 6. Propagate to evacuation if present
+      if (Array.isArray(sim.evacuation_routes) && sim.evacuation_routes.length > 0) {
+        const evacData = {
+          routes: sim.evacuation_routes,
+          status: 'SIMULATED_ROUTING',
+        };
+        if (typeof store.updateEvacuation === 'function') {
+          store.updateEvacuation(evacData);
+        } else {
+          store.dispatch({ type: ACTION_TYPES.EVACUATION_UPDATED, payload: evacData });
+        }
+      }
+
+      // 7. Propagate to response if present
+      if (sim.response_plan) {
+        const planData = {
+          plans: [sim.response_plan],
+          activePlan: sim.response_plan,
+        };
+        if (typeof store.updateResponse === 'function') {
+          store.updateResponse(planData);
+        } else {
+          store.dispatch({ type: ACTION_TYPES.RESPONSE_UPDATED, payload: planData });
+        }
+      }
+
+      // Notify layers and globe that simulated perturbation is active
+      const expansionFactor = 1.0 + ((rainMultiplier - 1.0) * 1.6);
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('climate:simulation-applied', {
+          detail: {
+            expansionFactor,
+            rainMultiplier,
+            roadAccess: (1.0 - roadDegradation) * 100,
+            simulated: true,
+            scenario_name: sim.scenario_name || scenarioId,
+          },
+        }));
+
+        window.dispatchEvent(new CustomEvent('climate:region-simulated', {
+          detail: {
+            rain: (45.0 * rainMultiplier).toFixed(1),
+            flood_risk: `${Math.min(100, Math.round((sim.peak_severity || 0.85) * 100))}% [SIMULATED]`,
+            evac_action: 'MANDATORY EVACUATION [SIMULATED]',
+            simulated: true,
+            affected_population: sim.affected_population,
+          },
+        }));
+      }
+
+      return { ok: true, simulation: sim };
+    } else {
+      const errMsg = res?.error || 'Simulation run returned an unexpected response';
+      const stage = res?.data?.stage || res?.data?.error?.details?.stage || 'MODEL_PROPAGATION';
+      const reason = res?.data?.reason || res?.data?.error?.message || errMsg;
+      const requestId = res?.data?.request_id || res?.data?.error?.request_id || 'REQ-SIM-FAIL';
+      store.dispatch({
+        type: ACTION_TYPES.SIMULATION_STATE_CHANGED,
+        payload: { running: false, error: errMsg, stage, reason, requestId },
+      });
+      return { ok: false, error: errMsg, stage, reason, requestId };
+    }
+  } catch (err) {
+    const errMsg = err?.message || 'Exception occurred during simulation run';
+    store.dispatch({
+      type: ACTION_TYPES.SIMULATION_STATE_CHANGED,
+      payload: { running: false, error: errMsg, stage: 'CLIENT_NETWORK', reason: errMsg, requestId: 'REQ-CLIENT' },
+    });
+    return { ok: false, error: errMsg, stage: 'CLIENT_NETWORK', reason: errMsg, requestId: 'REQ-CLIENT' };
+  }
+}
+
+/**
+ * Resets the digital twin simulation back to baseline ground truth.
+ *
+ * @param {object} options
+ * @param {object} options.store
+ * @param {object} [options.client]
+ * @returns {Promise<object>}
+ */
+export async function resetSimulationBaseline({
+  store,
+  client = createClimateApiClient(),
+} = {}) {
+  if (!store || typeof store.dispatch !== 'function') {
+    throw new TypeError('resetSimulationBaseline requires an authoritative store instance');
+  }
+
+  store.dispatch({
+    type: ACTION_TYPES.SIMULATION_STATE_CHANGED,
+    payload: { running: false, currentRun: null, results: null },
+  });
+
+  // Re-sync baseline intelligence from backend
+  await syncIntelligenceFromRest({ store, client });
+
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('climate:simulation-reset', {}));
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Submits an evidence-grounded AI command directive query.
+ *
+ * @param {object} options
+ * @param {object} options.store
+ * @param {object} [options.client]
+ * @param {string} options.question
+ * @param {string|object} [options.region]
+ * @returns {Promise<object>}
+ */
+export async function queryAiDirective({
+  store,
+  client = createClimateApiClient(),
+  question,
+  region,
+} = {}) {
+  const currentRegion = region || store?.getState?.()?.selectedRegion || { name: 'Hyderabad' };
+  const res = await client.queryAi({ question, region: currentRegion });
+
+  if (res?.ok && res.data?.answer) {
+    if (store && typeof store.dispatch === 'function') {
+      store.dispatch({
+        type: ACTION_TYPES.AI_STATE_UPDATED,
+        payload: {
+          lastInference: res.data.answer,
+          status: 'ready',
+        },
+      });
+    }
+  }
+
+  return res;
+}
+
+/**
+ * Fetches and updates regional intelligence.
+ *
+ * @param {object} options
+ * @param {object} options.store
+ * @param {object} [options.client]
+ * @param {string} options.name
+ * @param {number} [options.lat]
+ * @param {number} [options.lon]
+ * @returns {Promise<object>}
+ */
+export async function fetchRegionalIntelligence({
+  store,
+  client = createClimateApiClient(),
+  name,
+  lat,
+  lon,
+} = {}) {
+  const res = await client.getGlobalRegion({ name, lat, lon });
+  if (res?.ok && res.data?.region) {
+    const regData = res.data.region;
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('climate:region-updated', { detail: regData }));
+    }
+  }
+  return res;
+}
+
+/**
  * Convenience bootstrap helper.
  */
 export async function bootstrapClimateData(options = {}) {

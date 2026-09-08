@@ -17,5 +17,17 @@ export {
 
 export {
   syncClimateStateFromRest,
+  syncIntelligenceFromRest,
+  syncGlobalDataFromRest,
   bootstrapClimateData,
+  runSimulationScenario,
+  resetSimulationBaseline,
+  queryAiDirective,
+  fetchRegionalIntelligence,
 } from './controller.js';
+
+export {
+  geocodeLocation,
+  reverseGeocodeLocation,
+  KNOWN_REGIONS,
+} from './geocoding.js';

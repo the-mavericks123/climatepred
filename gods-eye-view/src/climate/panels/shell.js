@@ -18,6 +18,8 @@ import { createLeftPanel } from './leftPanel.js';
 import { createRightPanel } from './rightPanel.js';
 import { createStatusBar } from './statusBar.js';
 import { createSensorMeshPanel } from './sensorMeshPanel.js';
+import { createBottomDrawer } from './bottomDrawer.js';
+import { createRegionFocusCard } from './regionFocusCard.js';
 
 const STYLE_ID = 'climate-eye-shell-css';
 const CSS_HREF = '/src/climate/panels/climateShell.css';
@@ -67,12 +69,16 @@ export function mountClimateShell(container = (typeof document !== 'undefined' ?
   const leftPanel = createLeftPanel(store);
   const sensorMeshPanel = createSensorMeshPanel(store);
   const rightPanel = createRightPanel(store);
+  const bottomDrawer = createBottomDrawer(store);
+  const regionFocusCard = createRegionFocusCard(store, bottomDrawer);
   const statusBar = createStatusBar(store);
 
   root.appendChild(topNav.element);
   root.appendChild(leftPanel.element);
   root.appendChild(sensorMeshPanel.element);
+  root.appendChild(regionFocusCard.element);
   root.appendChild(rightPanel.element);
+  root.appendChild(bottomDrawer.element);
   root.appendChild(statusBar.element);
 
   return {
@@ -81,14 +87,18 @@ export function mountClimateShell(container = (typeof document !== 'undefined' ?
       topNav,
       leftPanel,
       sensorMeshPanel,
+      regionFocusCard,
       rightPanel,
+      bottomDrawer,
       statusBar,
     },
     destroy: () => {
       topNav.destroy();
       leftPanel.destroy();
       sensorMeshPanel.destroy();
+      regionFocusCard.destroy();
       rightPanel.destroy();
+      bottomDrawer.destroy();
       statusBar.destroy();
       root.remove();
     },

@@ -27,6 +27,7 @@ import {
   unregisterPickOwner,
   resolvePickId,
 } from '../../data/pickRegistry.js';
+import { isPickedWorldPosition } from '../../data/scenePick.js';
 import { governorRequestRender } from '../../renderGovernor.js';
 import { CLIMATE_LAYERS } from '../state/constants.js';
 
@@ -63,30 +64,47 @@ export function createGlobalHazardsLayer({
   let storeUnsubscribe = null;
   let isDestroyed = false;
   let popoverEl = null;
+  let currentExpansionFactor = 1.0;
+  let isSimulationActive = false;
+
+  let layerFilters = {
+    hazards: true,
+    heat: true,
+    flood: true,
+    drought: true,
+    wildfire: true,
+    earthquake: true,
+    predictions: true,
+    compound: true,
+    impact: true,
+    evacuation: true,
+    infra: true,
+    nodes: true,
+  };
 
   // Track entities by ID
   const entityMap = new Map();
 
-  // Tactical Color Palettes
-  const COLOR_HEAT_FILL = Cesium.Color ? Cesium.Color.fromCssColorString('rgba(239, 68, 68, 0.35)') : null;
-  const COLOR_HEAT_OUTLINE = Cesium.Color ? Cesium.Color.fromCssColorString('#ef4444') : null;
+  // Tactical Color Palettes (Refined Editorial Command Center Palette)
+  const COLOR_HEAT_FILL = Cesium.Color ? Cesium.Color.fromCssColorString('rgba(184, 50, 50, 0.35)') : null;
+  const COLOR_HEAT_OUTLINE = Cesium.Color ? Cesium.Color.fromCssColorString('#B83232') : null;
 
-  const COLOR_FLOOD_FILL = Cesium.Color ? Cesium.Color.fromCssColorString('rgba(59, 130, 246, 0.45)') : null;
-  const COLOR_FLOOD_OUTLINE = Cesium.Color ? Cesium.Color.fromCssColorString('#3b82f6') : null;
+  const COLOR_FLOOD_FILL = Cesium.Color ? Cesium.Color.fromCssColorString('rgba(70, 110, 150, 0.40)') : null;
+  const COLOR_FLOOD_OUTLINE = Cesium.Color ? Cesium.Color.fromCssColorString('#3F648A') : null;
 
-  const COLOR_FIRE_FILL = Cesium.Color ? Cesium.Color.fromCssColorString('rgba(249, 115, 22, 0.35)') : null;
-  const COLOR_FIRE_POINT = Cesium.Color ? Cesium.Color.fromCssColorString('#f97316') : null;
-  const COLOR_FIRE_OUTLINE = Cesium.Color ? Cesium.Color.fromCssColorString('#dc2626') : null;
+  const COLOR_FIRE_FILL = Cesium.Color ? Cesium.Color.fromCssColorString('rgba(190, 80, 25, 0.38)') : null;
+  const COLOR_FIRE_POINT = Cesium.Color ? Cesium.Color.fromCssColorString('#C2551A') : null;
+  const COLOR_FIRE_OUTLINE = Cesium.Color ? Cesium.Color.fromCssColorString('#8A2500') : null;
 
-  const COLOR_QUAKE_FILL = Cesium.Color ? Cesium.Color.fromCssColorString('rgba(234, 179, 8, 0.20)') : null;
-  const COLOR_QUAKE_POINT = Cesium.Color ? Cesium.Color.fromCssColorString('#eab308') : null;
-  const COLOR_QUAKE_OUTLINE = Cesium.Color ? Cesium.Color.fromCssColorString('#854d0e') : null;
+  const COLOR_QUAKE_FILL = Cesium.Color ? Cesium.Color.fromCssColorString('rgba(180, 140, 40, 0.25)') : null;
+  const COLOR_QUAKE_POINT = Cesium.Color ? Cesium.Color.fromCssColorString('#B48C28') : null;
+  const COLOR_QUAKE_OUTLINE = Cesium.Color ? Cesium.Color.fromCssColorString('#705510') : null;
 
-  const COLOR_CYCLONE_FILL = Cesium.Color ? Cesium.Color.fromCssColorString('rgba(20, 184, 166, 0.35)') : null;
-  const COLOR_CYCLONE_OUTLINE = Cesium.Color ? Cesium.Color.fromCssColorString('#14b8a6') : null;
+  const COLOR_CYCLONE_FILL = Cesium.Color ? Cesium.Color.fromCssColorString('rgba(80, 125, 110, 0.35)') : null;
+  const COLOR_CYCLONE_OUTLINE = Cesium.Color ? Cesium.Color.fromCssColorString('#3D7865') : null;
 
-  const COLOR_COMPOUND_FILL = Cesium.Color ? Cesium.Color.fromCssColorString('rgba(168, 85, 247, 0.45)') : null;
-  const COLOR_COMPOUND_OUTLINE = Cesium.Color ? Cesium.Color.fromCssColorString('#a855f7') : null;
+  const COLOR_COMPOUND_FILL = Cesium.Color ? Cesium.Color.fromCssColorString('rgba(110, 75, 115, 0.40)') : null;
+  const COLOR_COMPOUND_OUTLINE = Cesium.Color ? Cesium.Color.fromCssColorString('#7A4C82') : null;
 
   /**
    * Builds or returns the tactical popover HUD overlay container.
@@ -207,6 +225,13 @@ export function createGlobalHazardsLayer({
           <span class="label">RECOMMENDED DIRECTIVE:</span>
           <p class="directive-text">${action}</p>
         </div>
+
+        <div class="ce-popover-actions-bar">
+          <button type="button" class="ce-popover-act-btn" data-tab="SIMULATION">SIMULATE</button>
+          <button type="button" class="ce-popover-act-btn" data-tab="PREDICTIONS">PREDICT</button>
+          <button type="button" class="ce-popover-act-btn" data-tab="CASCADE">CASCADE</button>
+          <button type="button" class="ce-popover-act-btn" data-tab="EVACUATION">EVACUATE</button>
+        </div>
       </div>
     `;
 
@@ -239,6 +264,17 @@ export function createGlobalHazardsLayer({
         hidePopover();
       };
     }
+
+    const actionBtns = popover.querySelectorAll('.ce-popover-act-btn');
+    actionBtns.forEach((btn) => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const tab = btn.getAttribute('data-tab');
+        if (typeof window !== 'undefined' && tab) {
+          window.dispatchEvent(new CustomEvent('climate:open-drawer-tab', { detail: { tab } }));
+        }
+      };
+    });
   }
 
   function hidePopover() {
@@ -263,10 +299,15 @@ export function createGlobalHazardsLayer({
       return;
     }
 
-    const heatEnabled = currentLayers[CLIMATE_LAYERS.HEAT_ZONES] !== false;
-    const floodEnabled = currentLayers[CLIMATE_LAYERS.FLOOD_ZONES] !== false;
-    const compoundEnabled = currentLayers[CLIMATE_LAYERS.COMPOUND_ZONES] !== false;
-    const cycloneEnabled = currentLayers[CLIMATE_LAYERS.CYCLONE_ZONES] !== false;
+    const hazardsMaster = layerFilters.hazards !== false;
+    const heatEnabled = hazardsMaster && (currentLayers[CLIMATE_LAYERS.HEAT_ZONES] !== false) && (layerFilters.heat !== false);
+    const floodEnabled = hazardsMaster && (currentLayers[CLIMATE_LAYERS.FLOOD_ZONES] !== false) && (layerFilters.flood !== false);
+    const compoundEnabled = hazardsMaster && (currentLayers[CLIMATE_LAYERS.COMPOUND_ZONES] !== false) && (layerFilters.compound !== false);
+    const cycloneEnabled = hazardsMaster && (currentLayers[CLIMATE_LAYERS.CYCLONE_ZONES] !== false);
+    const wildfireEnabled = hazardsMaster && (layerFilters.wildfire !== false);
+    const earthquakeEnabled = hazardsMaster && (layerFilters.earthquake !== false);
+    const droughtEnabled = hazardsMaster && (layerFilters.drought !== false);
+    const evacEnabled = layerFilters.evacuation !== false;
 
     // Aggregate hazards from global feed slice and local hazard slice
     const globalHazards = state.global?.hazards || [];
@@ -288,11 +329,15 @@ export function createGlobalHazardsLayer({
       if (type === 'FLOOD' && !floodEnabled) continue;
       if (type === 'COMPOUND' && !compoundEnabled) continue;
       if (type === 'CYCLONE' && !cycloneEnabled) continue;
+      if (type === 'DROUGHT' && !droughtEnabled) continue;
+      if (type === 'WILDFIRE' && !wildfireEnabled) continue;
+      if (type === 'EARTHQUAKE' && !earthquakeEnabled) continue;
 
       const entityId = `${GLOBAL_HAZARD_ENTITY_PREFIX}${hz.zone_id}`;
       activeEntityIds.add(entityId);
 
-      const radiusMeters = Math.max((hz.radius_km || 10) * 1000, 2000);
+      const rawRadius = (hz.radius_km || 10) * 1000;
+      const radiusMeters = Math.max(rawRadius * currentExpansionFactor, 2000);
       const position = Cesium.Cartesian3.fromDegrees(lon, lat, 0);
 
       let fillColor = COLOR_HEAT_FILL;
@@ -394,6 +439,10 @@ export function createGlobalHazardsLayer({
       const position = Cesium.Cartesian3.fromDegrees(lon, lat, 0);
 
       const evType = (ev.event_type || '').toUpperCase();
+      if (evType === 'EARTHQUAKE' && !earthquakeEnabled) continue;
+      if (evType === 'WILDFIRE' && !wildfireEnabled) continue;
+      if (evType === 'CYCLONE' && !cycloneEnabled) continue;
+
       let pointColor = COLOR_QUAKE_POINT;
       let outlineColor = COLOR_QUAKE_OUTLINE;
       let fillColor = COLOR_QUAKE_FILL;
@@ -534,6 +583,189 @@ export function createGlobalHazardsLayer({
       }
     }
 
+    // 4. Process Evacuation Corridors & Shelters (Dynamic around selected region)
+    const selectedRegion = state.selectedRegion || { latitude: 17.3850, longitude: 78.4867, name: 'Hyderabad' };
+    const regLat = Number.isFinite(selectedRegion.latitude) ? selectedRegion.latitude : 17.3850;
+    const regLon = Number.isFinite(selectedRegion.longitude) ? selectedRegion.longitude : 78.4867;
+    const regName = selectedRegion.name || 'Selected Region';
+
+    // 4a. Dynamic Regional Hazard Spatial Zone (Part 12 & 13)
+    const regHazardEntityId = `${GLOBAL_HAZARD_ENTITY_PREFIX}region-focus-${regName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+    activeEntityIds.add(regHazardEntityId);
+    const regBaseRadius = 18000;
+    const regEffectiveRadius = regBaseRadius * (isSimulationActive ? currentExpansionFactor : 1.0);
+    const regPosition = Cesium.Cartesian3.fromDegrees(regLon, regLat, 0);
+
+    const regColorFill = isSimulationActive
+      ? Cesium.Color.fromCssColorString('rgba(168, 85, 247, 0.35)')
+      : Cesium.Color.fromCssColorString('rgba(239, 68, 68, 0.28)');
+    const regColorOutline = isSimulationActive
+      ? Cesium.Color.fromCssColorString('#a855f7')
+      : Cesium.Color.fromCssColorString('#ef4444');
+
+    let regEntity = entityMap.get(regHazardEntityId);
+    if (!regEntity) {
+      regEntity = dataSource.entities.add({
+        id: regHazardEntityId,
+        name: `${regName.toUpperCase()} ACTIVE IMPACT ZONE`,
+        position: regPosition,
+        ellipse: {
+          semiMajorAxis: regEffectiveRadius,
+          semiMinorAxis: regEffectiveRadius,
+          material: regColorFill,
+          outline: true,
+          outlineColor: regColorOutline,
+          outlineWidth: isSimulationActive ? 3 : 2,
+          heightReference: Cesium.HeightReference?.CLAMP_TO_GROUND ?? 1,
+        },
+        label: {
+          text: isSimulationActive ? `⚠️ [SIMULATED] ${regName.toUpperCase()} EXPANDED IMPACT ZONE` : `📍 ${regName.toUpperCase()} HAZARD ZONE`,
+          font: '12px "Plus Jakarta Sans", sans-serif',
+          style: Cesium.LabelStyle?.FILL_AND_OUTLINE ?? 2,
+          fillColor: Cesium.Color.WHITE,
+          outlineColor: Cesium.Color.BLACK,
+          outlineWidth: 3,
+          pixelOffset: new Cesium.Cartesian2(0, -22),
+          heightReference: Cesium.HeightReference?.CLAMP_TO_GROUND ?? 1,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        },
+        properties: {
+          hazard_type: isSimulationActive ? 'SIMULATED_HAZARD' : 'REGIONAL_HAZARD',
+          region: regName,
+          simulated: isSimulationActive,
+          radius_km: Math.round(regEffectiveRadius / 1000),
+        },
+      });
+      entityMap.set(regHazardEntityId, regEntity);
+    } else {
+      if (regEntity.position?.setValue) regEntity.position.setValue(regPosition);
+      else regEntity.position = regPosition;
+      if (regEntity.ellipse) {
+        regEntity.ellipse.semiMajorAxis = regEffectiveRadius;
+        regEntity.ellipse.semiMinorAxis = regEffectiveRadius;
+        regEntity.ellipse.material = regColorFill;
+        regEntity.ellipse.outlineColor = regColorOutline;
+      }
+      if (regEntity.label) {
+        regEntity.label.text = isSimulationActive ? `⚠️ [SIMULATED] ${regName.toUpperCase()} EXPANDED IMPACT ZONE` : `📍 ${regName.toUpperCase()} HAZARD ZONE`;
+      }
+    }
+
+    if (evacEnabled && typeof Cesium.Cartesian3?.fromDegreesArray === 'function') {
+      // Safe Corridor 1 (Highground safe egress towards elevated shelter)
+      const corridor1Id = `${GLOBAL_HAZARD_ENTITY_PREFIX}evac-safe-corridor`;
+      activeEntityIds.add(corridor1Id);
+      const safePositions = Cesium.Cartesian3.fromDegreesArray([
+        regLon, regLat,
+        regLon + 0.025, regLat + 0.020,
+        regLon + 0.053, regLat + 0.040,
+      ]);
+
+      let corridorEntity = entityMap.get(corridor1Id);
+      if (!corridorEntity) {
+        corridorEntity = dataSource.entities.add({
+          id: corridor1Id,
+          name: `SAFE EVACUATION CORRIDOR: ${regName.toUpperCase()} NORTH EGRESS`,
+          polyline: {
+            positions: safePositions,
+            width: isSimulationActive ? 6 : 4,
+            material: Cesium.Color.fromCssColorString('#10b981'),
+            clampToGround: true,
+          },
+          properties: {
+            hazard_type: 'EVACUATION_CORRIDOR',
+            status: 'SAFE',
+            corridor_name: `${regName} Highground Vector`,
+            eta_minutes: 18,
+          },
+        });
+        entityMap.set(corridor1Id, corridorEntity);
+      } else {
+        if (corridorEntity.polyline) {
+          corridorEntity.polyline.positions = safePositions;
+        }
+      }
+
+      // Blocked Route (Lowland Crossing susceptible to flood surcharge)
+      const blockedRouteId = `${GLOBAL_HAZARD_ENTITY_PREFIX}evac-blocked-corridor`;
+      activeEntityIds.add(blockedRouteId);
+      const blockedPositions = Cesium.Cartesian3.fromDegreesArray([
+        regLon, regLat,
+        regLon - 0.015, regLat - 0.020,
+        regLon - 0.032, regLat - 0.035,
+      ]);
+
+      let blockedEntity = entityMap.get(blockedRouteId);
+      if (!blockedEntity) {
+        blockedEntity = dataSource.entities.add({
+          id: blockedRouteId,
+          name: `BLOCKED CORRIDOR: ${regName.toUpperCase()} LOWLAND CROSSING`,
+          polyline: {
+            positions: blockedPositions,
+            width: isSimulationActive ? 6 : 4,
+            material: Cesium.Color.fromCssColorString('#ef4444'),
+            clampToGround: true,
+          },
+          properties: {
+            hazard_type: 'BLOCKED_ROUTE',
+            status: 'UNSAFE',
+            reason: 'Surface flooding exceedance (Strain Index: 0.88)',
+          },
+        });
+        entityMap.set(blockedRouteId, blockedEntity);
+      } else {
+        if (blockedEntity.polyline) {
+          blockedEntity.polyline.positions = blockedPositions;
+        }
+      }
+
+      // Safe Shelter Marker
+      const shelterId = `${GLOBAL_HAZARD_ENTITY_PREFIX}safe-shelter`;
+      activeEntityIds.add(shelterId);
+      const shelterPos = Cesium.Cartesian3.fromDegrees(regLon + 0.053, regLat + 0.040, 0);
+
+      let shelterEntity = entityMap.get(shelterId);
+      if (!shelterEntity) {
+        shelterEntity = dataSource.entities.add({
+          id: shelterId,
+          name: `SAFE SHELTER: ${regName.toUpperCase()} ELEVATED CENTER`,
+          position: shelterPos,
+          point: {
+            pixelSize: 14,
+            color: Cesium.Color.fromCssColorString('#10b981'),
+            outlineColor: Cesium.Color.WHITE,
+            outlineWidth: 2,
+            heightReference: Cesium.HeightReference?.CLAMP_TO_GROUND ?? 1,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          },
+          label: {
+            text: `🏥 SAFE SHELTER [${regName.toUpperCase()}]`,
+            font: '12px "Plus Jakarta Sans", sans-serif',
+            style: Cesium.LabelStyle?.FILL_AND_OUTLINE ?? 2,
+            fillColor: Cesium.Color.WHITE,
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 3,
+            pixelOffset: new Cesium.Cartesian2(0, -18),
+            heightReference: Cesium.HeightReference?.CLAMP_TO_GROUND ?? 1,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          },
+          properties: {
+            hazard_type: 'SHELTER',
+            title: `SAFE SHELTER: ${regName}`,
+            capacity: 2500,
+            current_demand: 1850,
+            distance_km: 4.2,
+            eta_minutes: 18,
+            status: 'SAFE',
+          },
+        });
+        entityMap.set(shelterId, shelterEntity);
+      } else {
+        if (shelterEntity.position?.setValue) shelterEntity.position.setValue(shelterPos);
+        else shelterEntity.position = shelterPos;
+      }
+    }
+
     // Remove entities that are no longer active
     for (const [entityId, entity] of entityMap.entries()) {
       if (!activeEntityIds.has(entityId)) {
@@ -582,11 +814,14 @@ export function createGlobalHazardsLayer({
 
           if (data) {
             showPopover(data, movement.position);
-            // Also notify store
+            // Also notify store and listeners
             store.dispatch({
               type: 'HAZARD_SELECTED',
               payload: { hazardId: data.zone_id || data.event_id || pickId },
             });
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('climate:hazard-selected', { detail: data }));
+            }
           }
           try {
             governorRequestRender('climate-global-hazard-picked');
@@ -594,6 +829,39 @@ export function createGlobalHazardsLayer({
         } else {
           // If clicked on empty space, hide popover
           hidePopover();
+
+          // Globe click to select location (Part 5 & 7)
+          let cartesian = null;
+          if (viewer.scene?.pickPositionSupported && typeof viewer.scene.pickPosition === 'function') {
+            try {
+              cartesian = viewer.scene.pickPosition(movement.position);
+            } catch (_) {}
+          }
+          if (!cartesian || !isPickedWorldPosition(cartesian)) {
+            const ray = viewer.camera?.getPickRay ? viewer.camera.getPickRay(movement.position) : null;
+            if (ray && viewer.scene?.globe?.pick) {
+              cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+            } else if (viewer.camera?.pickEllipsoid) {
+              cartesian = viewer.camera.pickEllipsoid(movement.position, viewer.scene?.globe?.ellipsoid);
+            }
+          }
+
+          if (cartesian && isPickedWorldPosition(cartesian)) {
+            try {
+              const carto = Cesium.Cartographic.fromCartesian(cartesian);
+              const lat = Cesium.Math.toDegrees(carto.latitude);
+              const lon = Cesium.Math.toDegrees(carto.longitude);
+              if (Number.isFinite(lat) && Number.isFinite(lon)) {
+                if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                  window.dispatchEvent(new CustomEvent('climate:globe-clicked', {
+                    detail: { latitude: lat, longitude: lon }
+                  }));
+                }
+              }
+            } catch (err) {
+              console.warn('[ClimateEye] Globe click conversion error:', err);
+            }
+          }
         }
       }, Cesium.ScreenSpaceEventType?.LEFT_CLICK ?? 0);
     }
@@ -601,6 +869,72 @@ export function createGlobalHazardsLayer({
     storeUnsubscribe = store.subscribe(() => {
       syncEntitiesFromState();
     });
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('climate:simulation-applied', (e) => {
+        currentExpansionFactor = e.detail?.expansionFactor || 1.64;
+        isSimulationActive = true;
+        syncEntitiesFromState();
+      });
+
+      window.addEventListener('climate:simulation-reset', () => {
+        currentExpansionFactor = 1.0;
+        isSimulationActive = false;
+        syncEntitiesFromState();
+      });
+
+      window.addEventListener('climate:prediction-horizon-changed', (e) => {
+        const horizon = e.detail?.horizon || 'now';
+        if (horizon === '30m') currentExpansionFactor = 1.25;
+        else if (horizon === '60m') currentExpansionFactor = 1.55;
+        else if (horizon === '6h') currentExpansionFactor = 2.10;
+        else currentExpansionFactor = 1.0;
+        syncEntitiesFromState();
+      });
+
+      window.addEventListener('climate:layer-filter-changed', (e) => {
+        layerFilters = { ...layerFilters, ...(e.detail || {}) };
+        syncEntitiesFromState();
+      });
+
+      window.addEventListener('climate:highlight-evac-corridors', () => {
+        const corridorId = `${GLOBAL_HAZARD_ENTITY_PREFIX}evac-corridor-nh65`;
+        const entity = entityMap.get(corridorId);
+        if (entity?.polyline) {
+          entity.polyline.width = 8;
+          setTimeout(() => {
+            if (entity?.polyline) entity.polyline.width = 4;
+          }, 4000);
+        }
+      });
+
+      window.addEventListener('climate:causal-node-picked', (e) => {
+        const target = e.detail?.target;
+        const CAUSAL_TARGETS = {
+          rain: { lat: 17.3850, lon: 78.4867, height: 40000 },
+          soil: { lat: 17.3950, lon: 78.4950, height: 35000 },
+          flood: { lat: 17.3800, lon: 78.4800, height: 30000 },
+          road: { lat: 17.3700, lon: 78.4700, height: 25000 },
+          hospital: { lat: 17.4250, lon: 78.5400, height: 25000 },
+          delay: { lat: 17.4000, lon: 78.5100, height: 35000 },
+        };
+        const dest = CAUSAL_TARGETS[target] || CAUSAL_TARGETS.rain;
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(dest.lon, dest.lat, dest.height),
+          duration: 2.0,
+        });
+      });
+
+      window.addEventListener('climate:flyTo', (e) => {
+        const { latitude, longitude, height } = e.detail || {};
+        if (typeof latitude === 'number' && typeof longitude === 'number') {
+          viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, height || 350000),
+            duration: 2.0,
+          });
+        }
+      });
+    }
 
     syncEntitiesFromState();
   }

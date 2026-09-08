@@ -31,6 +31,7 @@ Thumbs.db
 
 # Temporary workspace, installers & logs
 Work/
+scratch/
 *.msi
 *.log
 .gev-logs/
@@ -43,3 +44,4 @@ _bmad/
 _bmad-output/
 verify_global_browser.mjs
 verify_runtime_browser.mjs
+test_browser_sim.mjs

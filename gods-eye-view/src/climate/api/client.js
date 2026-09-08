@@ -401,6 +401,44 @@ export class ClimateApiClient {
     return this._request('/api/v1/global/ai-summary', { method: 'GET', ...options });
   }
 
+  /**
+   * POST /api/v1/global/ai-query
+   * Queries the evidence-grounded AI command center with question and optional region context.
+   *
+   * @param {object} params
+   * @param {string} params.question
+   * @param {string|object} [params.region]
+   * @param {object} [options]
+   * @returns {Promise<object>}
+   */
+  async queryAi({ question, region, ...options } = {}) {
+    const payload = {
+      question: question || '',
+      region: region || {},
+    };
+    return this._request('/api/v1/global/ai-query', { method: 'POST', body: payload, ...options });
+  }
+
+  /**
+   * GET /api/v1/global/region
+   * Retrieves live operational telemetry and hazard intelligence for a target region.
+   *
+   * @param {object} params
+   * @param {string} params.name
+   * @param {number} [params.lat]
+   * @param {number} [params.lon]
+   * @param {object} [options]
+   * @returns {Promise<object>}
+   */
+  async getGlobalRegion({ name, lat, lon, ...options } = {}) {
+    const params = new URLSearchParams();
+    if (name) params.set('name', name);
+    if (lat !== undefined && lat !== null) params.set('lat', String(lat));
+    if (lon !== undefined && lon !== null) params.set('lon', String(lon));
+    const qs = params.toString();
+    return this._request(`/api/v1/global/region${qs ? `?${qs}` : ''}`, { method: 'GET', ...options });
+  }
+
   async syncGlobal(options = {}) {
     return this._request('/api/v1/global/sync', { method: 'POST', ...options });
   }
